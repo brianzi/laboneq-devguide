@@ -13,7 +13,7 @@ We cover the following key artifact categories:
 - Code generation wrapper and Python/Rust boundary
 - Artifact validation and invariants
 
-This guide explains what each artifact represents, why it exists, where it is produced and stored in the codebase, who consumes it, and the key invariants and constraints it carries.
+This guide explains each artifact's representation, rationale, and production workflow in the codebase, who consumes it, and the key invariants and constraints it carries.
 
 ---
 

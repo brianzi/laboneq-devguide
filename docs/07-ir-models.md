@@ -50,11 +50,11 @@ The DSL supports constructs for:
 - Conditional execution (`Match`, `Case`)
 - Pseudo-random number generation (`PRNGSetup`, `PRNGLoop`)
 
-### Why it exists
+Rationale
 
 This DSL tree provides a high-level, declarative interface for experiment authors to describe pulse sequences, measurement loops, and control flow without hardware-specific details. It abstracts away device setup and scheduling concerns.
 
-### Where it lives
+Source Location
 
 - Python package: `src/python/laboneq/dsl/experiment/`
 - Key files:
@@ -89,11 +89,11 @@ This DSL tree provides a high-level, declarative interface for experiment author
 
 It is produced by the [`ExperimentInfoBuilder`](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/implementation/payload_builder/experiment_info_builder/experiment_info_builder.py).
 
-### Why it exists
+Rationale
 
 `ExperimentInfo` serves as the compatibility bridge payload between the Python DSL and the Rust compiler backend. It consolidates all experiment and setup information into a form suitable for serialization and consumption by the Rust compiler.
 
-### Where it lives
+Source Location
 
 - Python package: `src/python/laboneq/implementation/payload_builder/experiment_info_builder/`
 - Key file: [`experiment_info_builder.py`](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/implementation/payload_builder/experiment_info_builder/experiment_info_builder.py)
@@ -124,11 +124,11 @@ The Rust DSL operation tree is the normalized experiment representation inside t
 
 Each operation carries semantic fields relevant to its type, such as section alignment, sweep parameters, acquisition type, repetition mode, pulse parameters, and more.
 
-### Why it exists
+Rationale
 
 This IR provides a normalized, strongly typed, and backend-optimized representation of the experiment suitable for rewriting, validation, and scheduling passes in Rust.
 
-### Where it lives
+Source Location
 
 - Rust crate: `laboneq-dsl`
 - Source files:
@@ -160,11 +160,11 @@ The scheduled IR node tree is the core timed tree representation after schedulin
 
 This structure forms a timed tree where children are attached at offsets relative to their parent, representing the precise timing of operations.
 
-### Why it exists
+Rationale
 
 The scheduled IR is the canonical real-time experiment representation with concrete timing and offsets, suitable for code generation and diagnostics.
 
-### Where it lives
+Source Location
 
 - Rust crate: `laboneq-ir`
 - Source files:
@@ -199,11 +199,11 @@ The schedule map and recipe represent the compilation output that encodes the ti
 
 These data structures are used to orchestrate execution and replacement flows at runtime.
 
-### Why it exists
+Rationale
 
 They provide a compact, structured representation of the compiled experiment, enabling efficient runtime control, waveform replacement, and feedback.
 
-### Where it lives
+Source Location
 
 - Python package:
   - `src/python/laboneq/data/recipe.py`
@@ -240,11 +240,11 @@ Code generation artifacts are the device-specific outputs produced by the code g
 - Signal delays and result handle maps
 - Feedback register configurations and measurement allocations
 
-### Why it exists
+Rationale
 
 These artifacts are the final compiled outputs that are uploaded to hardware devices and executed in real time.
 
-### Where it lives
+Source Location
 
 - Python package: `src/python/laboneq/compiler/seqc/code_generator.py`
 - Rust crate: `laboneq-codegenerator`
@@ -280,11 +280,11 @@ The near-time execution IR is a Python-side representation of the near-time cont
 
 This IR is built by the `ExecutionFactoryFromExperiment` from the Python DSL.
 
-### Why it exists
+Rationale
 
 It enables near-time control flow interpretation, parameter sweeping, and callback invocation in the controller runtime, distinct from the real-time hardware execution.
 
-### Where it lives
+Source Location
 
 - Python package: `src/python/laboneq/executor/`
 - Key files:
@@ -327,11 +327,11 @@ It enables near-time control flow interpretation, parameter sweeping, and callba
 - Execution and result-transfer wait time estimates
 - Waveform and command-table preparation helpers
 
-### Why it exists
+Rationale
 
 These runtime IRs bridge the compiled experiment and the concrete LabOne API calls to devices, enabling runtime validation, preparation, and execution orchestration.
 
-### Where it lives
+Source Location
 
 - Python package:
   - `src/python/laboneq/data/scheduled_experiment.py`

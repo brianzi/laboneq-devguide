@@ -195,11 +195,11 @@ graph TD
 - Mechanisms for node writes, experiment upload, ready/done phases, and result collection.  
 - Setup fingerprinting to ensure experiment and hardware consistency.
 
-### 9.2 Why it exists
+Rationale
 
 The device communication layer abstracts the complexity of managing multiple heterogeneous instruments, synchronizing their configuration and execution, and interfacing with the LabOne data server. It enables LabOne Q to provide a unified, high-level experiment control interface while handling the low-level details of device communication and orchestration.
 
-### 9.3 Where it lives
+Source Location
 
 - Python source files under `src/python/laboneq/controller/devices/` contain the device communication implementations.  
 - The emulation device is in `zi_emulator.py`.  

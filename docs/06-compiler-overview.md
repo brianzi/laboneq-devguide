@@ -42,11 +42,11 @@ The main entry point for compilation is the function `compile_experiment` locate
 - Handling of chunking for large parameter sweeps.
 - Management of compiler settings and device-class resolution.
 
-### Why it exists
+Rationale
 
 This function provides a stable, user-facing API to compile experiments, abstracting away the complexity of the underlying Rust compiler and scheduler. It ensures that the experiment is valid and that the device setup is consistent before compilation.
 
-### Where it lives
+Source Location
 
 - Python: `src/python/laboneq/core/utilities/compile_experiment.py`
 - Compiler orchestration: `src/python/laboneq/compiler/workflow/compiler.py`
@@ -80,11 +80,11 @@ Located in [`src/python/laboneq/compiler/workflow/compat.py`](https://github.com
 - Serialization of the experiment and setup into Cap'n Proto format.
 - Invocation of Rust extension functions such as `build_experiment_capnp()`.
 
-#### Why it exists
+#Rationale
 
 Rust code requires strongly typed, ownership-safe data structures. The compatibility bridge ensures that Python objects are normalized, defaulted, and converted into Rust-native types, preserving calibration, device setup, and experiment semantics.
 
-#### Where it lives
+#Source Location
 
 - Python compatibility bridge: `src/python/laboneq/compiler/workflow/compat.py`
 - Rust compiler Python bridge: `src/rust/laboneq-compiler-py/src/lib.rs`
@@ -150,11 +150,11 @@ Lowering from scheduled nodes to timed IR nodes is handled in [`src/rust/laboneq
 - Scheduler crate (`laboneq-scheduler`) implementing passes and lowering.
 - Backend-specific preprocessing for QCCS devices.
 
-### Why it exists
+Rationale
 
 Scheduling is a complex, timing-critical process that benefits from Rust's performance and safety guarantees. The scheduler ensures that the compiled experiment respects hardware constraints and timing requirements.
 
-### Where it lives
+Source Location
 
 - Rust IR: `src/rust/laboneq-ir/`
 - Scheduler: `src/rust/laboneq-scheduler/`
@@ -195,11 +195,11 @@ The Python scheduler wrapper in [`src/python/laboneq/compiler/scheduler/schedule
 - Scheduler wrapper that manages parameter dictionaries and chunking.
 - Pulse sheet schedule preparation for the pulse sheet viewer.
 
-### Why it exists
+Rationale
 
 The Python realtime compiler provides a convenient interface for the rest of the Python codebase to invoke the Rust compiler backend, abstracting away details of parameter handling and chunking.
 
-### Where it lives
+Source Location
 
 - Python realtime compiler: `src/python/laboneq/compiler/workflow/realtime_compiler.py`
 - Scheduler wrapper: `src/python/laboneq/compiler/scheduler/scheduler.py`
@@ -240,11 +240,11 @@ The SeqC code generator, used for QCCS devices, is implemented in [`src/python/l
 - Rust code generator extension (`src/rust/codegenerator/`).
 - Data structures for waveforms, command tables, and integration kernels.
 
-### Why it exists
+Rationale
 
 Code generation translates the scheduled IR into executable programs tailored to each device's hardware capabilities and constraints.
 
-### Where it lives
+Source Location
 
 - Python code generator wrapper: `src/python/laboneq/compiler/seqc/code_generator.py`
 - Rust code generator crate: `src/rust/codegenerator/`
@@ -292,11 +292,11 @@ The `recipe_processor.pre_process_compiled()` function in [`src/python/laboneq/c
 - Metadata for result shapes and acquisition handles.
 - Recipe processing utilities for runtime preparation.
 
-### Why it exists
+Rationale
 
 This metadata enables the runtime controller to execute the compiled experiment correctly, manage device configurations, and interpret measurement results.
 
-### Where it lives
+Source Location
 
 - `ScheduledExperiment`: `src/python/laboneq/data/scheduled_experiment.py`
 - Recipe processor: `src/python/laboneq/controller/recipe_processor.py`

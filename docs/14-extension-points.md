@@ -11,8 +11,8 @@ This page is structured to first orient you on the major extension points in the
 Each section answers the following questions:
 
 - **What exists?** The abstraction or component currently implemented.
-- **Why it exists?** The design rationale or role in the system.
-- **Where it lives?** The relevant source directories and files.
+- **Rationale**: The design rationale or role in the system.
+- **Source Location**: The relevant source directories and files.
 - **Who consumes it?** The clients or downstream components.
 - **What invariants it carries?** Important correctness or semantic guarantees.
 
@@ -50,11 +50,11 @@ Operations include:
 
 These operations are implemented as Python classes in the `laboneq.dsl.experiment` package, with concrete subclasses for each operation kind.
 
-### Why it exists?
+Rationale
 
 The DSL abstracts the complex hardware control into a user-friendly, composable Python API. It allows experimenters to declaratively specify pulse sequences, loops, conditional branches, and measurement instructions without dealing with low-level device details.
 
-### Where it lives?
+Source Location
 
 - Python DSL experiment root: `src/python/laboneq/dsl/experiment/experiment.py`
 - Section and operation classes: `src/python/laboneq/dsl/experiment/section.py` and sibling files
@@ -99,11 +99,11 @@ Key components:
 - Rust scheduler: `src/rust/laboneq-scheduler/`
 - Lowering passes: `src/rust/laboneq-scheduler/src/lower_experiment/mod.rs`
 
-### Why it exists?
+Rationale
 
 The compiler transforms the high-level DSL experiment into a timed, scheduled intermediate representation (IR) suitable for code generation and device execution. It enforces timing constraints, resolves parameters, and applies hardware-specific preprocessing.
 
-### Where it lives?
+Source Location
 
 - Python compiler workflow and hooks: `src/python/laboneq/compiler/workflow/`
 - Rust IR and scheduler crates: `src/rust/laboneq-ir/`, `src/rust/laboneq-scheduler/`
@@ -143,11 +143,11 @@ Key device classes:
 - Device setup and calibration helpers in `src/python/laboneq/dsl/device/`
 - Backend preprocessing for QCCS devices in Rust (`src/rust/laboneq-qccs-backend/`)
 
-### Why it exists?
+Rationale
 
 To abstract hardware-specific details such as trigger chains, waveform upload, and device capabilities, enabling the compiler and runtime to target multiple instruments seamlessly.
 
-### Where it lives?
+Source Location
 
 - Python device abstractions: `src/python/laboneq/controller/devices/`
 - Device setup DSL: `src/python/laboneq/dsl/device/`
@@ -190,11 +190,11 @@ Calibration data is represented in the DSL calibration package (`src/python/labo
 
 Calibration fields are merged from baseline setup and experiment-level overrides during payload building.
 
-### Why it exists?
+Rationale
 
 Calibration ensures that the physical hardware behaves as expected, compensating for imperfections and enabling precise pulse shaping and measurement.
 
-### Where it lives?
+Source Location
 
 - DSL calibration: `src/python/laboneq/dsl/calibration/`
 - Payload builder merges calibration: `src/python/laboneq/implementation/payload_builder/experiment_info_builder/`
@@ -237,11 +237,11 @@ Artifacts are the outputs of compilation used by the runtime controller and devi
 
 Artifacts are encapsulated in `ArtifactsCodegen` within the `ScheduledExperiment` model (`src/python/laboneq/data/scheduled_experiment.py`).
 
-### Why it exists?
+Rationale
 
 Artifacts represent the concrete instructions and data uploaded to hardware devices for execution. They bridge the gap between abstract experiment definitions and device-specific control.
 
-### Where it lives?
+Source Location
 
 - Code generation wrappers: `src/python/laboneq/compiler/seqc/code_generator.py`
 - Rust code generator: `src/rust/laboneq-rust/src/lib.rs`
@@ -282,11 +282,11 @@ The repository contains extensive tests covering:
 - Calibration merging and payload building (`src/python/laboneq/implementation/payload_builder/tests/`)
 - Integration and end-to-end compilation tests
 
-### Why it exists?
+Rationale
 
 Testing ensures correctness, prevents regressions, and validates that extensions integrate properly.
 
-### Where it lives?
+Source Location
 
 - Python tests: `src/python/laboneq/testing/`
 - Rust tests: `src/rust/laboneq-scheduler/tests/`, `src/rust/laboneq-ir/tests/`
@@ -323,11 +323,11 @@ Compatibility shims handle backward compatibility and cross-version support, esp
 - Parameter conversion and normalization
 - Legacy serialization formats
 
-### Why it exists?
+Rationale
 
 To maintain stable user APIs and experiment reproducibility across LabOne Q versions.
 
-### Where it lives?
+Source Location
 
 - Compatibility bridge: `src/python/laboneq/compiler/workflow/compat.py`
 - Legacy adapters: `src/python/laboneq/implementation/legacy_adapters/`

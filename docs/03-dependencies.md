@@ -271,14 +271,14 @@ graph TD
 - Optional dependency groups for development, testing, documentation, and examples.
 - A layered Rust crate structure supporting IR, scheduling, backend preprocessing, and code generation.
 
-### 10.2 Why it exists
+Rationale
 
 - The Rust extension provides performance-critical compilation and scheduling functionality.
 - Zurich Instruments dependencies enable runtime communication with hardware.
 - Optional groups modularize dependencies for different developer and user needs.
 - The build system ensures seamless integration of Rust and Python components.
 
-### 10.3 Where it lives
+Source Location
 
 - `pyproject.toml` at the repository root governs packaging and dependencies.
 - Rust crates under `src/rust/` implement the compiler backend.

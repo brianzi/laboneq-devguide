@@ -1,6 +1,6 @@
 # Rust compiler core
 
-This page provides a comprehensive developer-oriented overview of the Rust compiler core within the `zhinst/laboneq` repository. It explains the architecture and purpose of the Rust crates, the PyO3 extension packaging, Cap'n Proto serialization for data exchange, the laboneq_rust submodules, the QCCS backend preprocessing, the scheduler and lowering passes, and the role of foreign/native components in the system. The goal is to clarify what exists in the Rust compiler core, why it exists, where it lives in the codebase, who consumes it, and what invariants it maintains.
+This page provides a comprehensive developer-oriented overview of the Rust compiler core within the `zhinst/laboneq` repository. It explains the architecture and purpose of the Rust crates, the PyO3 extension packaging, Cap'n Proto serialization for data exchange, the laboneq_rust submodules, the QCCS backend preprocessing, the scheduler and lowering passes, and the role of foreign/native components in the system. The goal is to clarify the Rust compiler core architecture, its design rationale, and its codebase organization, who consumes it, and what invariants it maintains.
 
 ---
 
