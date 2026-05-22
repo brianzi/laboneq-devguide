@@ -1,12 +1,12 @@
 # Repository and package map
 
-This page provides a comprehensive developer-oriented map of the `zhinst/laboneq` repository. It explains the repository layout, the Python and Rust packages under `src/python` and `src/rust`, the organization of tests, documentation, schemas, inventories, compatibility shims, and guidance on where developers should start exploring the codebase. The goal is to clarify what abstractions exist, why they exist, where they live, who consumes them, and what invariants they carry. This orientation is essential for maintainers and contributors to navigate the complex multi-language codebase effectively.
+This page provides a comprehensive developer-oriented map of the `zhinst/laboneq` repository. It explains the repository layout, the Python and Rust packages under `src/python` and `src/rust`, the organization of tests, documentation, schemas, inventories, compatibility shims, and practical entry points for code exploration. The emphasis is on concrete structure, implementation boundaries, and correctness constraints rather than user-facing API usage. This orientation is essential for maintainers and contributors to navigate the complex multi-language codebase effectively.
 
 ---
 
-## How to read this page as a maintainer
+## Maintainer orientation
 
-This page is structured to first present the overall repository layout and then dive into the main Python and Rust packages, followed by auxiliary directories such as tests, docs, and schemas. Each section explains the purpose of the components, their relationships, and their consumers. Where appropriate, code paths and source links are provided for direct reference. The page also highlights key invariants and design rationales to help maintainers understand the architectural decisions behind the code organization.
+This page is structured to first present the overall repository layout and then dive into the main Python and Rust packages, followed by auxiliary directories such as tests, docs, and schemas. Each section explains the purpose of the components, their relationships, and their consumers. Code paths and source links are provided where they improve traceability. The page also highlights key invariants and design rationales to help maintainers understand the architectural decisions behind the code organization.
 
 ---
 

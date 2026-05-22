@@ -4,7 +4,7 @@ This page provides a comprehensive overview of the LabOne Q software ecosystem a
 
 ---
 
-## How to read this page as a maintainer
+## Maintainer orientation
 
 This page is structured to provide a layered understanding of the LabOne Q ecosystem. It begins with the high-level architectural context of LabOne Q within the Zurich Instruments QCCS hardware and software stack. It then details the roles of the principal hardware devices supported by LabOne Q, focusing on their functional responsibilities and how LabOne Q targets them. Subsequently, the page discusses the software dependencies and related repositories that LabOne Q integrates with or builds upon, clarifying their purposes and relationships.
 
@@ -230,7 +230,7 @@ graph TD
 
 ## 8. Practical developer orientation
 
-### What exists?
+### Component summary
 
 - A Python DSL for experiment definition (`src/python/laboneq/dsl/experiment/experiment.py`).
 - A payload builder that converts DSL and setup into compiler inputs (`src/python/laboneq/implementation/payload_builder/experiment_info_builder/experiment_info_builder.py`).
@@ -241,23 +241,23 @@ graph TD
 - Integration with Zurich Instruments communication stacks (`zhinst-core`, `zhinst-comms`, `zhinst-toolkit`).
 - Application-layer experiment libraries (`laboneq-applications`).
 
-### Why does it exist?
+### Design rationale
 
 LabOne Q exists to provide a high-level, hardware-agnostic quantum experiment programming framework that compiles to optimized, sample-precise real-time programs for QCCS hardware. It abstracts complex hardware details, synchronization, and timing constraints, enabling users to focus on experiment logic rather than low-level device programming.
 
-### Where does it live?
+### Source references
 
 - Core LabOne Q codebase: `https://github.com/zhinst/laboneq`
 - Related runtime dependencies: `zhinst-toolkit`, `zhinst-core`, `zhinst-comms` (PyPI and GitHub)
 - Example and application repositories: `labone-api-examples`, `laboneq-applications`
 
-### Who consumes it?
+### Integration points
 
 - Quantum researchers and engineers defining and running experiments on QCCS hardware.
 - Application developers building domain-specific experiment libraries.
 - LabOne Q maintainers and developers extending compiler, runtime, or device support.
 
-### What invariants does it carry?
+### Invariants
 
 - Experiments are defined independently of hardware setup.
 - Compilation produces globally synchronized, sample-precise real-time programs.

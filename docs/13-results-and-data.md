@@ -4,7 +4,7 @@ This page provides a comprehensive developer-oriented overview of the result dat
 
 ---
 
-## How to read this page as a maintainer
+## Maintainer orientation
 
 This page is intended for developers who maintain or extend the LabOne Q compiler, runtime, or controller components. It assumes familiarity with the overall LabOne Q architecture, the Python DSL frontend, the Rust compiler IR, and the runtime controller execution model. The page focuses on the data shapes and metadata that describe experiment results, how they are constructed, and how they relate to hardware acquisition types and compiler outputs.
 
@@ -21,13 +21,13 @@ This page explains the invariants and design rationales behind these abstraction
 
 ## 1. Overview of ResultShapeInfo and result handles
 
-### What is `ResultShapeInfo`?
+### `ResultShapeInfo` data model
 
 `ResultShapeInfo` is a central metadata abstraction that describes the shape, axes, and handle mappings of experiment results produced by the compiler and runtime. It captures how raw hardware acquisition data and integrated results are organized into multi-dimensional arrays, how chunking of sweep parameters affects result shapes, and how hardware result sources map to logical result handles exposed to the user.
 
 This abstraction exists to provide a consistent, device-agnostic description of result data shapes that can be used by the runtime controller to allocate buffers, by analysis tools to interpret data arrays, and by the compiler to generate appropriate acquisition and integration instructions.
 
-### Where does `ResultShapeInfo` live?
+### Source references
 
 In the Python codebase, `ResultShapeInfo` and related classes reside primarily in:
 
@@ -36,7 +36,7 @@ In the Python codebase, `ResultShapeInfo` and related classes reside primarily i
 - `src/python/laboneq/compiler/seqc/recipe_generator.py` — generation of result handle metadata during code generation.
 - `src/python/laboneq/_rust/codegenerator/__init__.pyi` — Rust-side result handle and source definitions exposed to Python.
 
-### Who consumes `ResultShapeInfo`?
+### Result-processing integration
 
 - The **runtime controller** uses it to allocate result buffers and interpret incoming acquisition data.
 - The **compiler** produces it as part of the compilation output, describing the expected result layout.

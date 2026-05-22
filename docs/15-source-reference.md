@@ -1,10 +1,10 @@
 # Source reference map
 
-This page provides a comprehensive source reference map for the `zhinst/laboneq` codebase, intended as a dense developer-oriented guide to the most important files, classes, and functions. It explains what abstractions exist, why they exist, where they live in the repository, who consumes them, and what invariants they carry. Source links to the GitHub repository are included for direct inspection. This map complements the conceptual and architectural documentation by grounding the developer in the concrete code structure and key implementation artifacts.
+This page provides a comprehensive source reference map for the `zhinst/laboneq` codebase, intended as a dense developer-oriented guide to the most important files, classes, and functions. It emphasizes concrete source locations, implementation roles, integration boundaries, and correctness constraints. Source links to the GitHub repository are included for direct inspection. This map complements the conceptual and architectural documentation by grounding the developer in the concrete code structure and key implementation artifacts.
 
 ---
 
-## How to read this page as a maintainer
+## Maintainer orientation
 
 This page is organized into several sections:
 

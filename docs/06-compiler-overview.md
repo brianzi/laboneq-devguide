@@ -1,12 +1,12 @@
 # Compiler workflow overview
 
-This page provides a comprehensive overview of the compiler workflow in the LabOne Q project (`zhinst/laboneq`). It explains the orchestration of experiment compilation from the Python DSL frontend through the Rust-backed real-time compiler, including preprocessing, scheduling, code generation, and the generation of metadata for runtime execution and result handling. The document also clarifies the Python/Rust boundaries, compatibility layers, and the role of the realtime compiler. This overview is intended for developers maintaining or extending the compiler pipeline, offering practical orientation on what components exist, why they exist, where they live in the codebase, who consumes them, and the invariants they maintain.
+This page provides a comprehensive overview of the compiler workflow in the LabOne Q project (`zhinst/laboneq`). It explains the orchestration of experiment compilation from the Python DSL frontend through the Rust-backed real-time compiler, including preprocessing, scheduling, code generation, and the generation of metadata for runtime execution and result handling. The document also clarifies the Python/Rust boundaries, compatibility layers, and the role of the realtime compiler. This overview is intended for developers maintaining or extending the compiler pipeline, offering practical orientation on major components, source boundaries, integration points, and correctness constraints.
 
 ---
 
-## How to read this page as a maintainer
+## Maintainer orientation
 
-This page is structured to guide maintainers through the high-level compilation workflow, starting from the user-facing Python DSL and ending with the compiled artifacts and metadata consumed by the runtime controller. Each section describes a major phase or component in the compiler pipeline, referencing relevant source files and modules. Where appropriate, the discussion includes the rationale behind design choices and the invariants that must be preserved for correctness and compatibility.
+This page is structured to guide maintainers through the high-level compilation workflow, starting from the user-facing Python DSL and ending with the compiled artifacts and metadata consumed by the runtime controller. Each section describes a major phase or component in the compiler pipeline, referencing relevant source files and modules. The discussion includes design rationale and the invariants that must be preserved for correctness and compatibility.
 
 The page assumes familiarity with the overall LabOne Q architecture as described in the [README](https://github.com/zhinst/laboneq/blob/main/README.md) and the Python DSL frontend (`src/python/laboneq/dsl/experiment/experiment.py`). For detailed IR semantics and scheduling internals, see the companion pages in this guide.
 
@@ -65,7 +65,7 @@ The main entry point for compilation is the function `compile_experiment` locate
 
 `compile_experiment` accepts a fully constructed Python DSL `Experiment` object along with device setup and calibration information. It performs validation, builds the compilation payload, and triggers the compilation pipeline to produce a `ScheduledExperiment`.
 
-### What exists here
+### Component summary here
 
 - Validation of experiment and setup consistency.
 - Construction of `ExperimentInfo` via `ExperimentInfoBuilder` ([source](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/implementation/payload_builder/experiment_info_builder/experiment_info_builder.py)).
@@ -73,16 +73,16 @@ The main entry point for compilation is the function `compile_experiment` locate
 - Handling of chunking for large parameter sweeps.
 - Management of compiler settings and device-class resolution.
 
-Rationale
+### Design rationale
 
 This function provides a stable, user-facing API to compile experiments, abstracting away the complexity of the underlying Rust compiler and scheduler. It ensures that the experiment is valid and that the device setup is consistent before compilation.
 
-Source Location
+### Source references
 
 - Python: `src/python/laboneq/core/utilities/compile_experiment.py`
 - Compiler orchestration: `src/python/laboneq/compiler/workflow/compiler.py`
 
-### Who consumes it
+### Integration points
 
 - The LabOne Q session and controller layers invoke this function to compile experiments before execution.
 - Application-level experiment libraries and user scripts call this function to prepare experiments.
@@ -128,23 +128,23 @@ graph LR
 
 Located in [`src/python/laboneq/compiler/workflow/compat.py`](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/compiler/workflow/compat.py), this module provides functions to convert the Python `ExperimentInfo` and device setup into a Rust `Experiment` object.
 
-#### What exists here
+#### Component summary here
 
 - Builders for Rust `DeviceSetupBuilder` and `Experiment`.
 - Conversion of Python calibration and setup fields into Rust equivalents.
 - Serialization of the experiment and setup into Cap'n Proto format.
 - Invocation of Rust extension functions such as `build_experiment_capnp()`.
 
-#Rationale
+### Design rationale
 
 Rust code requires strongly typed, ownership-safe data structures. The compatibility bridge ensures that Python objects are normalized, defaulted, and converted into Rust-native types, preserving calibration, device setup, and experiment semantics.
 
-#Source Location
+### Source references
 
 - Python compatibility bridge: `src/python/laboneq/compiler/workflow/compat.py`
 - Rust compiler Python bridge: `src/rust/laboneq-compiler-py/src/lib.rs`
 
-#### Who consumes it
+#### Integration points
 
 - The Python compiler workflow calls this bridge to hand off the experiment to Rust.
 - Rust code uses the deserialized Cap'n Proto data to build the internal IR.
@@ -199,23 +199,23 @@ Lowering from scheduled nodes to timed IR nodes is handled in [`src/rust/laboneq
 - Special handling for precompensation, oscillator resets, and PRNG setup.
 - Grid alignment uses least-common-multiple escalation for timing consistency.
 
-### What exists here
+### Component summary here
 
 - Rust IR crate (`laboneq-ir`) defining `IrNode` and `IrKind` ([source](https://github.com/zhinst/laboneq/blob/main/src/rust/laboneq-ir/src/lib.rs)).
 - Scheduler crate (`laboneq-scheduler`) implementing passes and lowering.
 - Backend-specific preprocessing for QCCS devices.
 
-Rationale
+### Design rationale
 
 Scheduling is a complex, timing-critical process that benefits from Rust's performance and safety guarantees. The scheduler ensures that the compiled experiment respects hardware constraints and timing requirements.
 
-Source Location
+### Source references
 
 - Rust IR: `src/rust/laboneq-ir/`
 - Scheduler: `src/rust/laboneq-scheduler/`
 - QCCS backend: `src/rust/laboneq-qccs-backend/`
 
-### Who consumes it
+### Integration points
 
 - The Rust compiler bridge invokes the scheduler after preprocessing.
 - The code generator consumes the scheduled IR.
@@ -244,22 +244,22 @@ The Python `RealtimeCompiler` class in [`src/python/laboneq/compiler/workflow/re
 
 The Python scheduler wrapper in [`src/python/laboneq/compiler/scheduler/scheduler.py`](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/compiler/scheduler/scheduler.py) calls the Rust scheduling function `schedule_experiment()`, passing the Rust experiment IR and near-time parameters.
 
-### What exists here
+### Component summary here
 
 - Python `RealtimeCompiler` class wrapping Rust scheduling and code generation.
 - Scheduler wrapper that manages parameter dictionaries and chunking.
 - Pulse sheet schedule preparation for the pulse sheet viewer.
 
-Rationale
+### Design rationale
 
 The Python realtime compiler provides a convenient interface for the rest of the Python codebase to invoke the Rust compiler backend, abstracting away details of parameter handling and chunking.
 
-Source Location
+### Source references
 
 - Python realtime compiler: `src/python/laboneq/compiler/workflow/realtime_compiler.py`
 - Scheduler wrapper: `src/python/laboneq/compiler/scheduler/scheduler.py`
 
-### Who consumes it
+### Integration points
 
 - The main compiler workflow calls `RealtimeCompiler` to perform compilation.
 - The controller uses the compiled output for runtime execution.
@@ -289,22 +289,22 @@ The SeqC code generator, used for QCCS devices, is implemented in [`src/python/l
 - Produces SeqC source code, ELF binaries, waveform pools, command tables, integration weights, and pulse maps.
 - Handles device-specific waveform naming and scaling (e.g., SHFQA complex samples scaled to <1.0 magnitude).
 
-### What exists here
+### Component summary here
 
 - Python wrapper classes for code generation.
 - Rust code generator extension (`src/rust/codegenerator/`).
 - Data structures for waveforms, command tables, and integration kernels.
 
-Rationale
+### Design rationale
 
 Code generation translates the scheduled IR into executable programs tailored to each device's hardware capabilities and constraints.
 
-Source Location
+### Source references
 
 - Python code generator wrapper: `src/python/laboneq/compiler/seqc/code_generator.py`
 - Rust code generator crate: `src/rust/codegenerator/`
 
-### Who consumes it
+### Integration points
 
 - The realtime compiler calls the code generator after scheduling.
 - The controller consumes generated artifacts for device upload and execution.
@@ -341,22 +341,22 @@ The `recipe_processor.pre_process_compiled()` function in [`src/python/laboneq/c
 - Estimates execution and result-transfer wait times.
 - Provides helpers for waveform and command-table preparation.
 
-### What exists here
+### Component summary here
 
 - Data classes for compiled experiment representation.
 - Metadata for result shapes and acquisition handles.
 - Recipe processing utilities for runtime preparation.
 
-Rationale
+### Design rationale
 
 This metadata enables the runtime controller to execute the compiled experiment correctly, manage device configurations, and interpret measurement results.
 
-Source Location
+### Source references
 
 - `ScheduledExperiment`: `src/python/laboneq/data/scheduled_experiment.py`
 - Recipe processor: `src/python/laboneq/controller/recipe_processor.py`
 
-### Who consumes it
+### Integration points
 
 - The controller uses this data to orchestrate experiment execution.
 - Result builders and acquisition handlers use result-shape metadata.

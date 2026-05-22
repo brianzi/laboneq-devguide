@@ -4,7 +4,7 @@ This chapter provides a detailed developer-oriented overview of the device commu
 
 ---
 
-## How to read this page as a maintainer
+## Maintainer orientation
 
 This page is intended for developers who want to understand or extend the device communication layer of LabOne Q. It assumes familiarity with the overall LabOne Q architecture, the Python DSL frontend, and the compilation and runtime layers described in preceding chapters. The focus here is on the runtime/controller side, specifically the abstractions and implementations that manage device connections, configuration, and execution orchestration.
 
@@ -185,7 +185,7 @@ graph TD
 
 ## 9. Practical developer orientation
 
-### 9.1 What exists
+### 9.1 Component summary
 
 - A `DeviceCollection` class that aggregates all devices and manages their lifecycle and orchestration.  
 - An abstract `DeviceZI` base class defining the device interface and lifecycle hooks.  
@@ -195,24 +195,24 @@ graph TD
 - Mechanisms for node writes, experiment upload, ready/done phases, and result collection.  
 - Setup fingerprinting to ensure experiment and hardware consistency.
 
-Rationale
+### Design rationale
 
 The device communication layer abstracts the complexity of managing multiple heterogeneous instruments, synchronizing their configuration and execution, and interfacing with the LabOne data server. It enables LabOne Q to provide a unified, high-level experiment control interface while handling the low-level details of device communication and orchestration.
 
-Source Location
+### Source references
 
 - Python source files under `src/python/laboneq/controller/devices/` contain the device communication implementations.  
 - The emulation device is in `zi_emulator.py`.  
 - The controller and device collection are in `controller.py` and `device_collection.py`.  
 - External dependencies on `zhinst.core`, `zhinst.comms`, and `zhinst.toolkit` provide the communication stack.
 
-### 9.4 Who consumes it
+### 9.4 Integration points
 
 - The `Controller` class consumes `DeviceCollection` and `DeviceZI` instances to manage experiment execution.  
 - The runtime layers use device hooks to upload compiled artifacts, configure devices, and collect results.  
 - Higher-level application code and user-facing APIs indirectly rely on this layer for hardware interaction.
 
-### 9.5 What invariants it carries
+### 9.5 Invariants
 
 - Device setup fingerprint must match the compiled experiment to avoid runtime errors.  
 - Node writes must be synchronized and consistent to ensure correct device configuration.  

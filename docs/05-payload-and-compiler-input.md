@@ -4,7 +4,7 @@ This page provides a comprehensive developer-oriented overview of the payload bu
 
 ---
 
-## How to read this page as a maintainer
+## Maintainer orientation
 
 This page is intended for developers who maintain or extend the LabOne Q compiler frontend and payload builder. It assumes familiarity with the Python DSL for experiment definition (`laboneq.dsl.experiment`), the overall LabOne Q architecture, and the Rust compiler backend. The content explains the purpose and design of the payload-building layer, its location in the source tree, and how it fits into the compilation workflow. Code references include file paths and GitHub source links for direct inspection.
 
@@ -275,22 +275,22 @@ flowchart TD
 
 ## Practical developer orientation
 
-### What exists and why
+### Component summary and why
 
 The payload building layer exists to bridge the gap between the user-facing Python DSL and the low-level Rust compiler IR. It ensures that experiments are expressed in a hardware-agnostic manner but compiled with full knowledge of device setup, calibration, and parameterization. This separation allows users to focus on experiment logic while the system handles hardware details and calibration transparently.
 
-Source Location
+### Source references
 
 Payload building code is located in the `implementation/payload_builder` Python package, with `ExperimentInfoBuilder` as the main class. Signal and calibration mapping utilities live in `data/setup_description`. The compiler compatibility bridge is in `compiler/workflow`.
 
-### Who consumes it
+### Integration points
 
 - The **compiler workflow** (`compiler.py`) calls `ExperimentInfoBuilder` to build the payload.
 - The **compatibility bridge** (`compat.py`) consumes `ExperimentInfo` to produce Rust compiler input.
 - The **Rust compiler backend** consumes the serialized Cap'n Proto payload.
 - The **controller and runtime** indirectly consume the compiled experiment produced downstream.
 
-### What invariants it carries
+### Invariants
 
 - Unique and conflict-free signal mappings.
 - Complete and consistent calibration data.

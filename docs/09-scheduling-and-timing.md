@@ -1,14 +1,14 @@
 # Scheduling, timing grids, and section semantics
 
-This page provides a comprehensive developer-oriented explanation of the scheduling and timing mechanisms in the `zhinst/laboneq` codebase. It covers the responsibilities of the scheduler, the semantics of sections and timing grids, acquisition loops, repetition modes, delay and precompensation semantics, pseudo-random number generation (PRNG) and match/case constructs, feedback constraints, and validation rules. The goal is to clarify what abstractions exist, why they exist, where they live in the codebase, who consumes them, and what invariants they maintain.
+This page provides a comprehensive developer-oriented explanation of the scheduling and timing mechanisms in the `zhinst/laboneq` codebase. It covers the responsibilities of the scheduler, the semantics of sections and timing grids, acquisition loops, repetition modes, delay and precompensation semantics, pseudo-random number generation (PRNG) and match/case constructs, feedback constraints, and validation rules. The emphasis is on concrete structure, implementation boundaries, integration points, and correctness constraints.
 
 ---
 
-## How to read this page as a maintainer
+## Maintainer orientation
 
 This page is intended for developers working on or extending the LabOne Q compiler and runtime system, especially those involved in scheduling, timing, and real-time execution. It assumes familiarity with the overall LabOne Q architecture and the Python DSL frontend, as well as the Rust compiler backend.
 
-The page is structured to first explain the high-level concepts and abstractions, then delve into the key components and their interactions, referencing relevant source files and modules. Code paths and source links are provided for direct inspection. Where the design is inferred from the code rather than explicitly documented, this is clearly indicated.
+The page is structured to first explain the high-level concepts and abstractions, then delve into the key components and their interactions, referencing relevant source files and modules. Code paths and source links are provided for direct inspection. Inferred design details are identified explicitly when the code is more authoritative than the public documentation.
 
 Developers maintaining or enhancing scheduling should pay particular attention to the distinction between the Python DSL experiment tree, the Rust DSL operation tree, the scheduled IR nodes, and the final IR nodes with concrete timing. Understanding the timing grid propagation and section timing modes is critical for correct scheduling and validation.
 
@@ -16,7 +16,7 @@ Developers maintaining or enhancing scheduling should pay particular attention t
 
 ## 1. Scheduler responsibilities and architecture
 
-### 1.1 What the scheduler does
+### 1.1 Scheduler responsibilities
 
 The scheduler in LabOne Q is responsible for transforming a normalized experiment description into a timed, device-compatible representation suitable for code generation and real-time execution. This involves:
 
@@ -31,7 +31,7 @@ The scheduler in LabOne Q is responsible for transforming a normalized experimen
 
 The scheduler thus bridges the gap between the user-facing Python DSL and the low-level device-specific code generation.
 
-### 1.2 Where the scheduler lives
+### 1.2 Scheduler source references
 
 The scheduler is primarily implemented in Rust within the `laboneq-scheduler` crate:
 
@@ -44,7 +44,7 @@ The Python wrapper around the scheduler is in:
 - [`src/python/laboneq/compiler/scheduler/scheduler.py`](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/compiler/scheduler/scheduler.py)
 - [`src/python/laboneq/compiler/workflow/realtime_compiler.py`](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/compiler/workflow/realtime_compiler.py)
 
-### 1.3 Who consumes the scheduler
+### 1.3 Scheduler integration points
 
 - The Python compiler workflow (`Compiler.run`) calls the scheduler to produce a scheduled IR.
 - The code generator consumes the scheduled IR to produce device-specific code and artifacts.

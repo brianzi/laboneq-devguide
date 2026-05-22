@@ -4,19 +4,19 @@ This page provides a comprehensive orientation for developers extending and main
 
 ---
 
-## How to read this page as a maintainer
+## Maintainer orientation
 
 This page is structured to first orient you on the major extension points in the LabOne Q architecture, then provide detailed guidance on each area. It assumes familiarity with the overall LabOne Q architecture as described in earlier guide pages, especially the DSL frontend, compiler workflow, IR models, Rust compiler core, scheduling, code generation, runtime controller, and device layers.
 
 Each section answers the following questions:
 
-- **What exists?** The abstraction or component currently implemented.
+- **Implemented component**: The abstraction or component currently present in the codebase.
 - **Rationale**: The design rationale or role in the system.
 - **Source Location**: The relevant source directories and files.
-- **Who consumes it?** The clients or downstream components.
-- **What invariants it carries?** Important correctness or semantic guarantees.
+- **Integration boundary**: The clients or downstream components that depend on the component.
+- **Invariants**: Important correctness or semantic guarantees.
 
-Code and file paths are given as relative to the repository root, with links to the GitHub source for quick reference. Where details are inferred from source inspection rather than explicit documentation, this is noted.
+Code and file paths are given as relative to the repository root, with links to the GitHub source for quick reference. Inferred implementation details are identified explicitly when source inspection is more authoritative than public documentation.
 
 ---
 
@@ -35,7 +35,7 @@ Code and file paths are given as relative to the repository root, with links to 
 
 ## DSL operations
 
-### What exists?
+### Component summary
 
 The LabOne Q Python DSL frontend provides a rich set of experiment-building operations, structured as Python classes and methods. The main user-facing container is the `Experiment` class (`src/python/laboneq/dsl/experiment/experiment.py`), which holds a tree of `Section` objects (`src/python/laboneq/dsl/experiment/section.py`) and their child operations.
 
@@ -50,31 +50,30 @@ Operations include:
 
 These operations are implemented as Python classes in the `laboneq.dsl.experiment` package, with concrete subclasses for each operation kind.
 
-Rationale
+### Design rationale
 
 The DSL abstracts the complex hardware control into a user-friendly, composable Python API. It allows experimenters to declaratively specify pulse sequences, loops, conditional branches, and measurement instructions without dealing with low-level device details.
 
-Source Location
+### Source references
 
 - Python DSL experiment root: `src/python/laboneq/dsl/experiment/experiment.py`
 - Section and operation classes: `src/python/laboneq/dsl/experiment/section.py` and sibling files
 - DSL calibration: `src/python/laboneq/dsl/calibration/`
 - Device definitions: `src/python/laboneq/dsl/device/instruments/`
 
-### Who consumes it?
+### Integration points
 
 - The `ExperimentInfoBuilder` (`src/python/laboneq/implementation/payload_builder/experiment_info_builder/experiment_info_builder.py`) lowers the DSL tree into the intermediate `ExperimentInfo` data structure.
 - The compiler workflow (`src/python/laboneq/compiler/workflow/compiler.py`) consumes `ExperimentInfo` to produce the compiled experiment.
 - The runtime controller consumes the compiled experiment for execution.
 
-### What invariants it carries?
+### Invariants
 
 - The DSL tree must be well-formed: e.g., at most one real-time acquisition loop (`AcquireLoopRt`), no nested real-time loops inside near-time loops.
 - Timing constraints are enforced later in the compiler but the DSL should not violate structural rules.
 - Operations carry unique identifiers (`uid`) for traceability.
 
-### How to add new DSL operations?
-
+### Implementation notes
 1. Define a new Python class in the `laboneq.dsl.experiment` package, subclassing the appropriate base operation class.
 2. Add mutating helper methods on `Section` or `Experiment` to create and append the new operation.
 3. Extend the `ExperimentInfoBuilder` to recognize and lower the new operation into the payload.
@@ -85,7 +84,7 @@ Source Location
 
 ## Compiler passes
 
-### What exists?
+### Component summary
 
 The LabOne Q compiler is a multi-stage pipeline orchestrated primarily in Python but backed by Rust for performance-critical passes.
 
@@ -99,31 +98,30 @@ Key components:
 - Rust scheduler: `src/rust/laboneq-scheduler/`
 - Lowering passes: `src/rust/laboneq-scheduler/src/lower_experiment/mod.rs`
 
-Rationale
+### Design rationale
 
 The compiler transforms the high-level DSL experiment into a timed, scheduled intermediate representation (IR) suitable for code generation and device execution. It enforces timing constraints, resolves parameters, and applies hardware-specific preprocessing.
 
-Source Location
+### Source references
 
 - Python compiler workflow and hooks: `src/python/laboneq/compiler/workflow/`
 - Rust IR and scheduler crates: `src/rust/laboneq-ir/`, `src/rust/laboneq-scheduler/`
 - Backend-specific preprocessing: `src/rust/laboneq-qccs-backend/`
 
-### Who consumes it?
+### Integration points
 
 - The code generator consumes the scheduled IR to produce device-specific code.
 - The runtime controller consumes the compiled experiment artifacts.
 - Developers extending the compiler add passes here.
 
-### What invariants it carries?
+### Invariants
 
 - The IR is a timed tree with concrete sample offsets.
 - Scheduler passes ensure signal sampling-rate commensurability.
 - Loop unrolling and parameter resolution must preserve experiment semantics.
 - Validation passes reject unsupported constructs or timing violations.
 
-### How to add new compiler passes?
-
+### Implementation notes
 1. Implement the pass in Rust within the `laboneq-scheduler` crate, following existing pass patterns.
 2. Register the pass in the scheduler pipeline (`src/rust/laboneq-scheduler/src/scheduler.rs`).
 3. Expose any necessary hooks in the Python compiler workflow.
@@ -133,7 +131,7 @@ Source Location
 
 ## Device support
 
-### What exists?
+### Component summary
 
 Device support is implemented as a set of Python classes representing instruments and their capabilities, with corresponding Rust backend support.
 
@@ -143,30 +141,29 @@ Key device classes:
 - Device setup and calibration helpers in `src/python/laboneq/dsl/device/`
 - Backend preprocessing for QCCS devices in Rust (`src/rust/laboneq-qccs-backend/`)
 
-Rationale
+### Design rationale
 
 To abstract hardware-specific details such as trigger chains, waveform upload, and device capabilities, enabling the compiler and runtime to target multiple instruments seamlessly.
 
-Source Location
+### Source references
 
 - Python device abstractions: `src/python/laboneq/controller/devices/`
 - Device setup DSL: `src/python/laboneq/dsl/device/`
 - Rust backend preprocessing: `src/rust/laboneq-qccs-backend/`
 
-### Who consumes it?
+### Integration points
 
 - The compiler queries device capabilities and setup during compilation.
 - The runtime controller uses device classes to upload artifacts, arm devices, and collect results.
 - Developers adding support for new instruments extend these classes.
 
-### What invariants it carries?
+### Invariants
 
 - Device classes must validate setup consistency.
 - Device-specific recipe data must be consistent with compiled artifacts.
 - Emulation flags and runtime checks ensure safe operation.
 
-### How to add new device support?
-
+### Implementation notes
 1. Add a new device class in `src/python/laboneq/controller/devices/`, subclassing `DeviceZI` or the appropriate base.
 2. Define device-specific setup, calibration, and recipe validation.
 3. Extend the DSL device definitions if needed.
@@ -177,7 +174,7 @@ Source Location
 
 ## Calibration fields
 
-### What exists?
+### Component summary
 
 Calibration data is represented in the DSL calibration package (`src/python/laboneq/dsl/calibration/`) and includes:
 
@@ -190,30 +187,29 @@ Calibration data is represented in the DSL calibration package (`src/python/labo
 
 Calibration fields are merged from baseline setup and experiment-level overrides during payload building.
 
-Rationale
+### Design rationale
 
 Calibration ensures that the physical hardware behaves as expected, compensating for imperfections and enabling precise pulse shaping and measurement.
 
-Source Location
+### Source references
 
 - DSL calibration: `src/python/laboneq/dsl/calibration/`
 - Payload builder merges calibration: `src/python/laboneq/implementation/payload_builder/experiment_info_builder/`
 - Calibration data structures in Rust are serialized via Cap'n Proto schemas (`schemas/pulse/v1/calibration.capnp`).
 
-### Who consumes it?
+### Integration points
 
 - The compiler uses calibration data to adjust pulses, offsets, and routing.
 - The runtime controller applies calibration during execution.
 - Device classes may query calibration for setup validation.
 
-### What invariants it carries?
+### Invariants
 
 - Calibration data must be consistent with device setup.
 - Conflicting calibrations for the same physical channel are rejected.
 - Calibration parameters must be within hardware limits.
 
-### How to add new calibration fields?
-
+### Implementation notes
 1. Define new calibration data classes in `laboneq.dsl.calibration`.
 2. Extend the payload builder to merge and convert new calibration fields.
 3. Update Cap'n Proto schemas and Rust serialization if needed.
@@ -224,7 +220,7 @@ Source Location
 
 ## Artifact types
 
-### What exists?
+### Component summary
 
 Artifacts are the outputs of compilation used by the runtime controller and devices. They include:
 
@@ -237,30 +233,29 @@ Artifacts are the outputs of compilation used by the runtime controller and devi
 
 Artifacts are encapsulated in `ArtifactsCodegen` within the `ScheduledExperiment` model (`src/python/laboneq/data/scheduled_experiment.py`).
 
-Rationale
+### Design rationale
 
 Artifacts represent the concrete instructions and data uploaded to hardware devices for execution. They bridge the gap between abstract experiment definitions and device-specific control.
 
-Source Location
+### Source references
 
 - Code generation wrappers: `src/python/laboneq/compiler/seqc/code_generator.py`
 - Rust code generator: `src/rust/laboneq-rust/src/lib.rs`
 - Scheduled experiment data model: `src/python/laboneq/data/scheduled_experiment.py`
 
-### Who consumes it?
+### Integration points
 
 - The runtime controller uploads artifacts to devices.
 - Device classes interpret artifacts for hardware programming.
 - Developers extending code generation add new artifact types here.
 
-### What invariants it carries?
+### Invariants
 
 - Artifacts must be consistent with the scheduled IR and device setup.
 - Waveform magnitudes must respect device constraints (e.g., SHFQA scaling).
 - Command tables and integration weights must match hardware expectations.
 
-### How to add new artifact types?
-
+### Implementation notes
 1. Extend the Rust code generator to produce new artifact data.
 2. Update Python wrappers to expose new artifact fields.
 3. Modify device classes to consume and upload new artifacts.
@@ -271,7 +266,7 @@ Source Location
 
 ## Tests and testing
 
-### What exists?
+### Component summary
 
 The repository contains extensive tests covering:
 
@@ -282,28 +277,27 @@ The repository contains extensive tests covering:
 - Calibration merging and payload building (`src/python/laboneq/implementation/payload_builder/tests/`)
 - Integration and end-to-end compilation tests
 
-Rationale
+### Design rationale
 
 Testing ensures correctness, prevents regressions, and validates that extensions integrate properly.
 
-Source Location
+### Source references
 
 - Python tests: `src/python/laboneq/testing/`
 - Rust tests: `src/rust/laboneq-scheduler/tests/`, `src/rust/laboneq-ir/tests/`
 - Example notebooks: `examples/` directory
 
-### Who consumes it?
+### Integration points
 
 - Developers extending any part of the system.
 - Continuous integration pipelines.
 
-### What invariants it carries?
+### Invariants
 
 - Tests must cover new features and edge cases.
 - Tests should verify invariants such as timing constraints, device compatibility, and calibration consistency.
 
-### How to add new tests?
-
+### Implementation notes
 1. Add unit tests for new DSL operations or compiler passes.
 2. Add integration tests compiling and running example experiments.
 3. Add device-specific tests for new hardware support.
@@ -314,7 +308,7 @@ Source Location
 
 ## Compatibility shims
 
-### What exists?
+### Component summary
 
 Compatibility shims handle backward compatibility and cross-version support, especially for:
 
@@ -323,30 +317,29 @@ Compatibility shims handle backward compatibility and cross-version support, esp
 - Parameter conversion and normalization
 - Legacy serialization formats
 
-Rationale
+### Design rationale
 
 To maintain stable user APIs and experiment reproducibility across LabOne Q versions.
 
-Source Location
+### Source references
 
 - Compatibility bridge: `src/python/laboneq/compiler/workflow/compat.py`
 - Legacy adapters: `src/python/laboneq/implementation/legacy_adapters/`
 - Serialization helpers: `src/python/laboneq/serializers/_legacy/`
 
-### Who consumes it?
+### Integration points
 
 - Compiler workflow during experiment lowering.
 - Runtime controller when loading legacy experiments.
 - Developers maintaining backward compatibility.
 
-### What invariants it carries?
+### Invariants
 
 - Shims must preserve experiment semantics.
 - Deprecated features should be clearly marked.
 - Compatibility code should be isolated to minimize technical debt.
 
-### How to add new compatibility shims?
-
+### Implementation notes
 1. Identify the API or data format change requiring compatibility.
 2. Implement conversion or normalization logic in `compat.py` or legacy adapters.
 3. Add tests verifying backward compatibility.

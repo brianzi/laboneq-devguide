@@ -4,13 +4,13 @@ The Python Domain-Specific Language (DSL) frontend in the LabOne Q project (`zhi
 
 ---
 
-## How to read this page as a maintainer
+## Maintainer orientation
 
 This page is intended as a comprehensive orientation for developers maintaining or extending the LabOne Q Python DSL frontend. It assumes familiarity with Python and some knowledge of quantum control concepts. The page explains the rationale behind the DSL design, the key classes and modules, how the DSL fits into the overall LabOne Q architecture, and the invariants that must be preserved for correctness. Code and file path references link directly to the GitHub repository for quick inspection. The page also clarifies which components are user-facing and which are internal, helping maintain a clean separation of concerns.
 
 ---
 
-## 1. Overview: What is the Python DSL frontend?
+## 1. Python DSL frontend overview
 
 The Python DSL frontend is the high-level API that users and higher-level application libraries use to define quantum experiments in LabOne Q. It abstracts away low-level device details and provides a structured, composable, and type-safe way to describe sequences of quantum operations, measurement loops, parameter sweeps, and real-time control flow.
 
@@ -162,7 +162,7 @@ Violations of these invariants raise exceptions early, preventing invalid experi
 
 ## 9. Practical developer orientation
 
-### What exists?
+### Component summary
 
 - A rich Python DSL for experiment definition, including hierarchical sections, operations, parameters, loops, and control flow.
 - Calibration and device setup abstractions integrated with the DSL.
@@ -170,27 +170,27 @@ Violations of these invariants raise exceptions early, preventing invalid experi
 - Support for near-time callbacks and match/case conditional execution.
 - Traversal and validation mechanisms enforcing frontend invariants.
 
-### Why does it exist?
+### Design rationale
 
 - To provide users and application developers with a high-level, expressive, and safe API for defining quantum experiments.
 - To separate experiment logic from device details and runtime concerns.
 - To enable efficient compilation and execution on Zurich Instruments QCCS hardware.
 - To support complex experiment workflows including feedback, dynamic control, and randomized sequences.
 
-### Where does it live?
+### Source references
 
 - Python package `laboneq.dsl.experiment` and related calibration and device setup modules under `src/python/laboneq/dsl/`.
 - Payload building and lowering in `src/python/laboneq/implementation/payload_builder/experiment_info_builder/`.
 - Near-time execution IR and runtime integration in `src/python/laboneq/executor/` and `src/python/laboneq/controller/`.
 
-### Who consumes it?
+### Integration points
 
 - The LabOne Q compiler frontend (`src/python/laboneq/compiler/workflow/compat.py`) consumes the DSL to produce compiler inputs.
 - The runtime controller consumes compiled experiments derived from the DSL.
 - Application libraries such as `laboneq-applications` build on the DSL to define domain-specific experiments.
 - End users write experiments directly using the DSL.
 
-### What invariants does it carry?
+### Invariants
 
 - Structural correctness of the experiment tree.
 - Timing and alignment constraints.

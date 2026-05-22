@@ -1,10 +1,10 @@
 # Rust compiler core
 
-This page provides a comprehensive developer-oriented overview of the Rust compiler core within the `zhinst/laboneq` repository. It explains the architecture and purpose of the Rust crates, the PyO3 extension packaging, Cap'n Proto serialization for data exchange, the laboneq_rust submodules, the QCCS backend preprocessing, the scheduler and lowering passes, and the role of foreign/native components in the system. The goal is to clarify the Rust compiler core architecture, its design rationale, and its codebase organization, who consumes it, and what invariants it maintains.
+This page provides a comprehensive developer-oriented overview of the Rust compiler core within the `zhinst/laboneq` repository. It explains the architecture and purpose of the Rust crates, the PyO3 extension packaging, Cap'n Proto serialization for data exchange, the laboneq_rust submodules, the QCCS backend preprocessing, the scheduler and lowering passes, and the role of foreign/native components in the system. The emphasis is on the Rust compiler architecture, codebase organization, integration boundaries, and correctness constraints.
 
 ---
 
-## How to read this page as a maintainer
+## Maintainer orientation
 
 This page is structured to guide maintainers through the Rust compiler core's architecture and implementation details. It assumes familiarity with the overall LabOne Q architecture and Python DSL frontend, as covered in earlier pages. The content is organized by major components and their interactions, with references to source files and GitHub links for deeper inspection. Tables summarize crate responsibilities and interfaces, while Mermaid diagrams illustrate key data flows and module relationships.
 
@@ -312,7 +312,7 @@ The Rust compiler core maintains several important invariants:
 
 ## Practical developer orientation
 
-### What exists?
+### Component summary
 
 - A modular Rust compiler core composed of crates for IR, DSL, scheduling, backend preprocessing, and Python bridging.
 - A PyO3 extension exposing compiler and scheduler APIs to Python.
@@ -321,7 +321,7 @@ The Rust compiler core maintains several important invariants:
 - Timed IR node trees representing scheduled experiments.
 - Lowering passes transforming DSL trees into timed IR.
 
-### Why does it exist?
+### Design rationale
 
 - To provide a performant, safe, and precise compilation pipeline for LabOne Q experiments.
 - To offload complex scheduling and timing logic from Python to Rust.
@@ -329,7 +329,7 @@ The Rust compiler core maintains several important invariants:
 - To maintain a clean separation between experiment definition (Python DSL) and compilation/execution.
 - To support hardware-specific constraints and optimizations via backend preprocessing.
 
-### Where does it live?
+### Source references
 
 - Rust crates under `src/rust/` in the repository root.
 - PyO3 bridge in `src/rust/laboneq-compiler-py/`.
@@ -338,7 +338,7 @@ The Rust compiler core maintains several important invariants:
 - Backend preprocessing in `src/rust/laboneq-qccs-backend/`.
 - Root crate and extension initialization in `src/rust/laboneq-rust/`.
 
-### Who consumes it?
+### Integration points
 
 - The Python compiler workflow (`src/python/laboneq/compiler/workflow/`) invokes Rust APIs via PyO3.
 - The Python scheduler wrapper calls Rust scheduling functions.
@@ -346,7 +346,7 @@ The Rust compiler core maintains several important invariants:
 - Runtime controller components consume compiled experiment artifacts produced downstream.
 - Developers extending the compiler or adding backend support interact with Rust crates.
 
-### What invariants does it carry?
+### Invariants
 
 - Precise timing and offset representation in IR nodes.
 - Consistent parameter resolution and propagation.

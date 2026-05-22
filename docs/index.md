@@ -8,7 +8,7 @@ Welcome to the comprehensive developer guide for **LabOne Q**, the quantum exper
 
 - [Purpose and Scope](#purpose-and-scope)  
 - [Repository Snapshot and Layout](#repository-snapshot-and-layout)  
-- [How to Read This Page as a Maintainer](#how-to-read-this-page-as-a-maintainer)  
+- [Maintainer orientation](#maintainer-orientation)  
 - [High-Level Layered Architecture](#high-level-layered-architecture)  
 - [Reading Paths and Documentation Structure](#reading-paths-and-documentation-structure)  
 - [References used on this page](#references-used-on-this-page)  
@@ -75,8 +75,7 @@ The LabOne Q repository is hosted at [https://github.com/zhinst/laboneq](https:/
 
 ---
 
-## How to Read This Page as a Maintainer
-
+## Maintainer orientation
 This page serves as a high-level orientation and roadmap. To effectively use it:
 
 - **Focus on the layered architecture diagram** to understand the major components and their interactions.

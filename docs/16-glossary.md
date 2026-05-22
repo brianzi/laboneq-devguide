@@ -1,10 +1,10 @@
 # Glossary
 
-This glossary provides a comprehensive reference for terminology and key concepts encountered in the LabOne Q (`zhinst/laboneq`) codebase and its ecosystem. It covers terms related to the Quantum Control and Computing Stack (QCCS), LabOne Q's Python DSL frontend, compiler and runtime internals, hardware abstractions, and related Zurich Instruments software components. The goal is to orient developers to what abstractions exist, why they exist, where they live in the codebase, who consumes them, and what invariants they maintain.
+This glossary provides a comprehensive reference for terminology and key concepts encountered in the LabOne Q (`zhinst/laboneq`) codebase and its ecosystem. It covers terms related to the Quantum Control and Computing Stack (QCCS), LabOne Q's Python DSL frontend, compiler and runtime internals, hardware abstractions, and related Zurich Instruments software components. The goal is to orient developers to the terminology, implementation layers, integration boundaries, and invariants used throughout the codebase.
 
 ---
 
-## How to read this page as a maintainer
+## Maintainer orientation
 
 This glossary is organized into thematic sections reflecting the layered architecture of LabOne Q and its ecosystem. Each entry defines a term or concept, explains its role and rationale, and references relevant source files or modules for deeper inspection. When maintaining or extending the codebase, this page helps clarify the meaning and boundaries of key abstractions, avoiding confusion between user-facing DSL constructs, internal intermediate representations (IRs), compiler passes, runtime models, and hardware-layer interfaces.
 

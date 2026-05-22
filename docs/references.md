@@ -4,7 +4,7 @@ This page consolidates the key references and source URLs used throughout the La
 
 ---
 
-## How to read this page as a maintainer
+## Maintainer orientation
 
 Maintainers and contributors can use this page as a starting point to locate authoritative sources and code artifacts relevant to various aspects of the LabOne Q codebase and ecosystem. Each reference entry includes a brief description of its purpose and scope, the location within the repository or external URL, and contextual notes on its role in the overall architecture.
 

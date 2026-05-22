@@ -1,10 +1,10 @@
 # Dependencies and build system
 
-This page provides a comprehensive overview of the dependencies and build system of the LabOne Q project (`zhinst/laboneq`). It covers the Python packaging infrastructure, the Rust extension built with maturin and PyO3, the core third-party dependencies including Zurich Instruments communication libraries, and the optional dependency groups. The discussion includes practical guidance for developers on what dependencies exist, why they are needed, where they are located in the repository, who consumes them, and the implications for building and testing the project.
+This page provides a comprehensive overview of the dependencies and build system of the LabOne Q project (`zhinst/laboneq`). It covers the Python packaging infrastructure, the Rust extension built with maturin and PyO3, the core third-party dependencies including Zurich Instruments communication libraries, and the optional dependency groups. The discussion emphasizes dependency roles, build-system integration, repository location, and the implications for local development and testing.
 
 ---
 
-## How to read this page as a maintainer
+## Maintainer orientation
 
 This page is structured to guide maintainers through the dependency landscape and build system of LabOne Q. It begins with the Python packaging configuration (`pyproject.toml`), explaining how the Rust extension is integrated via maturin and PyO3. It then details the core third-party dependencies, especially those related to Zurich Instruments hardware communication, and explains the rationale behind optional dependency groups. Finally, it discusses how these dependencies affect the build and test processes.
 
@@ -264,35 +264,35 @@ graph TD
 
 ## 10. Practical developer orientation
 
-### 10.1 What exists
+### 10.1 Component summary
 
 - A Python package with a Rust extension built via maturin and PyO3.
 - Core dependencies for hardware communication (`zhinst-comms`, `zhinst-core`, `zhinst-toolkit`).
 - Optional dependency groups for development, testing, documentation, and examples.
 - A layered Rust crate structure supporting IR, scheduling, backend preprocessing, and code generation.
 
-Rationale
+### Design rationale
 
 - The Rust extension provides performance-critical compilation and scheduling functionality.
 - Zurich Instruments dependencies enable runtime communication with hardware.
 - Optional groups modularize dependencies for different developer and user needs.
 - The build system ensures seamless integration of Rust and Python components.
 
-Source Location
+### Source references
 
 - `pyproject.toml` at the repository root governs packaging and dependencies.
 - Rust crates under `src/rust/` implement the compiler backend.
 - Python source under `src/python/laboneq/` includes DSL, compiler orchestration, controller, and runtime.
 - Rust extension Python bindings under `src/python/laboneq/_rust/`.
 
-### 10.4 Who consumes it
+### 10.4 Integration points
 
 - Python users and developers installing LabOne Q consume the Python package and Rust extension.
 - The compiler workflow consumes the Rust extension APIs.
 - The controller and session layers consume Zurich Instruments communication packages.
 - Developers use optional groups for testing, documentation, and examples.
 
-### 10.5 What invariants it carries
+### 10.5 Invariants
 
 - The Rust extension must be built with maturin and compatible with the Python package version.
 - Zurich Instruments dependencies require compatible LabOne software installed locally.

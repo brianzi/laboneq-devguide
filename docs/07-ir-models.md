@@ -48,15 +48,9 @@ graph TD
 
 ---
 
-## How to read this page as a maintainer
+## Maintainer orientation
 
-This page is structured to first introduce the high-level Python DSL IR that users and experiment authors interact with, then progressively describe the internal compiler IRs in Rust, and finally the runtime data structures used for execution and control. Each section explains:
-
-- **What** the IR or data structure represents
-- **Why** it exists and its role in the compilation/execution pipeline
-- **Where** it is implemented in the codebase (with file paths and source links)
-- **Who** consumes it (which components or layers)
-- **What invariants** or semantic guarantees it carries
+This page is structured to first introduce the high-level Python DSL IR that users and experiment authors interact with, then progressively describe the internal compiler IRs in Rust, and finally the runtime data structures used for execution and control. Each section describes the representation, pipeline role, source implementation, integration boundary, and semantic invariants of the relevant IR or data structure.
 
 Mermaid diagrams illustrate the relationships and data flow between IRs. Inline code and source links provide concrete entry points for exploration.
 
@@ -66,7 +60,7 @@ Maintainers should use this chapter as a reference when modifying or extending t
 
 ## 1. Python DSL experiment tree
 
-### What exists
+### Component summary
 
 The Python DSL experiment tree is the user-facing representation of an experiment. It is constructed by the user via the `laboneq.dsl.experiment.Experiment` class and its contained `Section` objects and operations.
 
@@ -81,18 +75,18 @@ The DSL supports constructs for:
 - Conditional execution (`Match`, `Case`)
 - Pseudo-random number generation (`PRNGSetup`, `PRNGLoop`)
 
-Rationale
+### Design rationale
 
 This DSL tree provides a high-level, declarative interface for experiment authors to describe pulse sequences, measurement loops, and control flow without hardware-specific details. It abstracts away device setup and scheduling concerns.
 
-Source Location
+### Source references
 
 - Python package: `src/python/laboneq/dsl/experiment/`
 - Key files:
   - [`experiment.py`](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/dsl/experiment/experiment.py)
   - [`section.py`](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/dsl/experiment/section.py)
 
-### Who consumes it
+### Integration points
 
 - The `ExperimentInfoBuilder` in the payload builder layer consumes the DSL tree to produce the next IR.
 - The Python compiler workflow (`src/python/laboneq/compiler/workflow/compiler.py`) initiates compilation from this DSL.
@@ -108,7 +102,7 @@ Source Location
 
 ## 2. ExperimentInfo payload
 
-### What exists
+### Component summary
 
 `ExperimentInfo` is a Python data structure representing a normalized and validated payload derived from the DSL tree and device setup. It contains:
 
@@ -120,16 +114,16 @@ Source Location
 
 It is produced by the [`ExperimentInfoBuilder`](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/implementation/payload_builder/experiment_info_builder/experiment_info_builder.py).
 
-Rationale
+### Design rationale
 
 `ExperimentInfo` serves as the compatibility bridge payload between the Python DSL and the Rust compiler backend. It consolidates all experiment and setup information into a form suitable for serialization and consumption by the Rust compiler.
 
-Source Location
+### Source references
 
 - Python package: `src/python/laboneq/implementation/payload_builder/experiment_info_builder/`
 - Key file: [`experiment_info_builder.py`](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/implementation/payload_builder/experiment_info_builder/experiment_info_builder.py)
 
-### Who consumes it
+### Integration points
 
 - The Python compiler workflow calls the compatibility bridge (`compat.py`) to convert `ExperimentInfo` into Rust DSL structures.
 - The Rust compiler backend consumes the serialized Cap'n Proto representation of `ExperimentInfo`.
@@ -145,7 +139,7 @@ Source Location
 
 ## 3. Rust DSL operation tree
 
-### What exists
+### Component summary
 
 The Rust DSL operation tree is the normalized experiment representation inside the Rust compiler before scheduling. It consists of `ExperimentNode` objects, each with an `Operation` kind.
 
@@ -155,17 +149,17 @@ The Rust DSL operation tree is the normalized experiment representation inside t
 
 Each operation carries semantic fields relevant to its type, such as section alignment, sweep parameters, acquisition type, repetition mode, pulse parameters, and more.
 
-Rationale
+### Design rationale
 
 This IR provides a normalized, strongly typed, and backend-optimized representation of the experiment suitable for rewriting, validation, and scheduling passes in Rust.
 
-Source Location
+### Source references
 
 - Rust crate: `laboneq-dsl`
 - Source files:
   - [`src/rust/laboneq-dsl/src/operation/variants.rs`](https://github.com/zhinst/laboneq/blob/main/src/rust/laboneq-dsl/src/operation/variants.rs)
 
-### Who consumes it
+### Integration points
 
 - The Rust scheduler and lowering passes consume this DSL tree.
 - Backend-specific preprocessing and validation operate on this IR.
@@ -181,7 +175,7 @@ Source Location
 
 ## 4. Scheduled IR node tree (`IrNode`)
 
-### What exists
+### Component summary
 
 The scheduled IR node tree is the core timed tree representation after scheduling and lowering. It consists of `IrNode` objects with:
 
@@ -218,11 +212,11 @@ graph TD
 ```
 
 
-Rationale
+### Design rationale
 
 The scheduled IR is the canonical real-time experiment representation with concrete timing and offsets, suitable for code generation and diagnostics.
 
-Source Location
+### Source references
 
 - Rust crate: `laboneq-ir`
 - Source files:
@@ -230,7 +224,7 @@ Source Location
   - [`src/rust/laboneq-ir/src/ir.rs`](https://github.com/zhinst/laboneq/blob/main/src/rust/laboneq-ir/src/ir.rs)
   - [`src/rust/laboneq-ir/src/experiment.rs`](https://github.com/zhinst/laboneq/blob/main/src/rust/laboneq-ir/src/experiment.rs)
 
-### Who consumes it
+### Integration points
 
 - The Rust code generator consumes this IR to produce device-specific code.
 - The Python `RealtimeCompiler` wraps this IR for further processing.
@@ -248,7 +242,7 @@ Source Location
 
 ## 5. Schedule map and recipe
 
-### What exists
+### Component summary
 
 The schedule map and recipe represent the compilation output that encodes the timing, parameter usage, and device configuration for execution.
 
@@ -257,11 +251,11 @@ The schedule map and recipe represent the compilation output that encodes the ti
 
 These data structures are used to orchestrate execution and replacement flows at runtime.
 
-Rationale
+### Design rationale
 
 They provide a compact, structured representation of the compiled experiment, enabling efficient runtime control, waveform replacement, and feedback.
 
-Source Location
+### Source references
 
 - Python package:
   - `src/python/laboneq/data/recipe.py`
@@ -270,7 +264,7 @@ Source Location
   - `laboneq-scheduler` (for scheduling and recipe generation)
   - `laboneq-codegenerator` (for code generation artifacts)
 
-### Who consumes it
+### Integration points
 
 - The controller consumes the recipe and schedule map to execute experiments.
 - The code generator produces these artifacts from the scheduled IR.
@@ -286,7 +280,7 @@ Source Location
 
 ## 6. Code generation artifacts
 
-### What exists
+### Component summary
 
 Code generation artifacts are the device-specific outputs produced by the code generator from the scheduled IR. For QCCS/SeqC devices, these include:
 
@@ -298,17 +292,17 @@ Code generation artifacts are the device-specific outputs produced by the code g
 - Signal delays and result handle maps
 - Feedback register configurations and measurement allocations
 
-Rationale
+### Design rationale
 
 These artifacts are the final compiled outputs that are uploaded to hardware devices and executed in real time.
 
-Source Location
+### Source references
 
 - Python package: `src/python/laboneq/compiler/seqc/code_generator.py`
 - Rust crate: `laboneq-codegenerator`
 - Python Rust extension: `src/python/laboneq/_rust/codegenerator/`
 
-### Who consumes it
+### Integration points
 
 - The controller uploads these artifacts to devices.
 - The runtime uses them for waveform replacement and feedback.
@@ -324,7 +318,7 @@ Source Location
 
 ## 7. Near-time execution IR
 
-### What exists
+### Component summary
 
 The near-time execution IR is a Python-side representation of the near-time control flow, separate from the real-time scheduled IR. It consists of statements such as:
 
@@ -338,18 +332,18 @@ The near-time execution IR is a Python-side representation of the near-time cont
 
 This IR is built by the `ExecutionFactoryFromExperiment` from the Python DSL.
 
-Rationale
+### Design rationale
 
 It enables near-time control flow interpretation, parameter sweeping, and callback invocation in the controller runtime, distinct from the real-time hardware execution.
 
-Source Location
+### Source references
 
 - Python package: `src/python/laboneq/executor/`
 - Key files:
   - [`executor.py`](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/executor/executor.py)
   - [`execution_from_experiment.py`](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/executor/execution_from_experiment.py)
 
-### Who consumes it
+### Integration points
 
 - The `NearTimeRunner` executes this IR asynchronously in the controller.
 - Callbacks and parameter updates are handled here.
@@ -365,7 +359,7 @@ Source Location
 
 ## 8. Runtime `RecipeData` and `ScheduledExperiment`
 
-### What exists
+### Component summary
 
 `ScheduledExperiment` is the controller-facing compilation product bundling:
 
@@ -385,18 +379,18 @@ Source Location
 - Execution and result-transfer wait time estimates
 - Waveform and command-table preparation helpers
 
-Rationale
+### Design rationale
 
 These runtime IRs bridge the compiled experiment and the concrete LabOne API calls to devices, enabling runtime validation, preparation, and execution orchestration.
 
-Source Location
+### Source references
 
 - Python package:
   - `src/python/laboneq/data/scheduled_experiment.py`
   - `src/python/laboneq/controller/recipe_processor.py`
   - `src/python/laboneq/controller/controller.py`
 
-### Who consumes it
+### Integration points
 
 - The `Controller` owns and executes `ScheduledExperiment` and `RecipeData`.
 - Device classes consume `DeviceRecipeData` for hardware-specific execution.
