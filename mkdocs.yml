@@ -1,0 +1,43 @@
+site_name: LabOne Q Developer Guide
+site_description: Developer-oriented architecture guide for zhinst/laboneq
+site_author: Manus AI
+repo_url: https://github.com/zhinst/laboneq
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - content.code.copy
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+nav:
+    - LabOne Q Developer Guide: index.md
+    - Ecosystem and hardware context: 01-ecosystem.md
+    - Repository and package map: 02-repository-map.md
+    - Dependencies and build system: 03-dependencies.md
+    - Python DSL frontend: 04-frontend-dsl.md
+    - Payload building and compiler inputs: 05-payload-and-compiler-input.md
+    - Compiler workflow overview: 06-compiler-overview.md
+    - Intermediate representations: 07-ir-models.md
+    - Rust compiler core: 08-rust-compiler-core.md
+    - Scheduling, timing grids, and section semantics: 09-scheduling-and-timing.md
+    - Code generation artifacts: 10-code-generation-artifacts.md
+    - Runtime and controller execution: 11-runtime-controller.md
+    - Device communication layer: 12-device-layer.md
+    - Results, handles, and data shapes: 13-results-and-data.md
+    - Extension and maintenance guide: 14-extension-points.md
+    - Source reference map: 15-source-reference.md
+    - Glossary: 16-glossary.md
+    - References: references.md
