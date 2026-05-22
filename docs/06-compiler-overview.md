@@ -16,6 +16,37 @@ The page assumes familiarity with the overall LabOne Q architecture as described
 
 The LabOne Q compiler transforms a high-level quantum experiment description, written in the Python DSL, into a fully scheduled, device-specific, real-time executable program. This process involves multiple stages:
 
+
+```mermaid
+graph TD
+    subgraph Frontend [Python Frontend]
+        DSL[Experiment DSL] --> PB[Payload Builder]
+        PB --> EI[ExperimentInfo]
+    end
+
+    subgraph Bridge [Compatibility Bridge]
+        EI --> CB[compat.py / Cap'n Proto]
+    end
+
+    subgraph Backend [Rust Compiler Backend]
+        CB --> PRE[QCCS Preprocessor]
+        PRE --> SCHED[Scheduler]
+        SCHED --> IR[Scheduled IR]
+        IR --> CG[Code Generator]
+    end
+
+    subgraph Output [Compilation Output]
+        CG --> SE[ScheduledExperiment]
+        SE --> RECIPE[Recipe & Artifacts]
+    end
+
+    style DSL fill:#f9f,stroke:#333,stroke-width:2px
+    style EI fill:#f9f,stroke:#333,stroke-width:2px
+    style IR fill:#bbf,stroke:#333,stroke-width:2px
+    style SE fill:#bfb,stroke:#333,stroke-width:2px
+```
+
+
 - **Preprocessing and payload building**: The Python DSL experiment and device setup are lowered into an intermediate `ExperimentInfo` structure.
 - **Python/Rust boundary crossing**: The `ExperimentInfo` is converted into a Rust-backed experiment representation via a compatibility bridge.
 - **Scheduling**: The Rust scheduler computes timing, resolves loops and conditions, and produces a timed intermediate representation (IR).
@@ -68,6 +99,30 @@ Source Location
 ## 3. Python/Rust boundary and compatibility bridge
 
 The LabOne Q compiler uses Rust extensions for performance and safety. The Python/Rust boundary is bridged by a compatibility layer that converts Python data structures into Rust IR and back.
+
+
+```mermaid
+graph LR
+    subgraph Python_Space [Python Space]
+        EI[ExperimentInfo]
+        CB[compat.py]
+        RTC[RealtimeCompiler]
+    end
+
+    subgraph Rust_Space [Rust Space]
+        PYO3[PyO3 Bindings]
+        CP[Cap'n Proto Deserializer]
+        R_CORE[Rust Compiler Core]
+    end
+
+    EI --> CB
+    CB -- "Serialized Payload" --> PYO3
+    PYO3 --> CP
+    CP --> R_CORE
+    R_CORE -- "Compiled Artifacts" --> PYO3
+    PYO3 --> RTC
+```
+
 
 ### Compatibility bridge: `build_rs_experiment`
 

@@ -15,6 +15,37 @@ We cover the following key IRs and data structures:
 
 This chapter is the most important in the guide, as it explains the layered abstractions and transformations that enable LabOne Q to compile and execute complex quantum experiments on Zurich Instruments hardware.
 
+
+```mermaid
+graph TD
+    subgraph Python_Frontend [Python Frontend]
+        DSL[Python DSL Tree] --> PB[Payload Builder]
+        PB --> EI[ExperimentInfo]
+    end
+
+    subgraph Bridge [Compatibility Bridge]
+        EI --> CB[compat.py / Cap'n Proto]
+    end
+
+    subgraph Rust_Compiler [Rust Compiler Core]
+        CB --> RDSL[Rust DSL Tree]
+        RDSL --> SCHED[Scheduler & Lowering]
+        SCHED --> IR[Scheduled IRNode Tree]
+    end
+
+    subgraph Artifacts [Compilation Artifacts]
+        IR --> CG[Code Generator]
+        CG --> SE[ScheduledExperiment]
+        SE --> RECIPE[Recipe & Artifacts]
+    end
+
+    style DSL fill:#f9f,stroke:#333,stroke-width:2px
+    style EI fill:#f9f,stroke:#333,stroke-width:2px
+    style IR fill:#bbf,stroke:#333,stroke-width:2px
+    style RECIPE fill:#bfb,stroke:#333,stroke-width:2px
+```
+
+
 ---
 
 ## How to read this page as a maintainer
@@ -159,6 +190,33 @@ The scheduled IR node tree is the core timed tree representation after schedulin
 - A vector of `NodeChild` records, each with a relative offset and child node
 
 This structure forms a timed tree where children are attached at offsets relative to their parent, representing the precise timing of operations.
+
+
+```mermaid
+graph TD
+    Root[IrNode: Root] --> S1[IrNode: Section 1]
+    Root --> S2[IrNode: Section 2]
+    
+    S1 --> P1[IrNode: PlayPulse]
+    S1 --> D1[IrNode: Delay]
+    
+    S2 --> L1[IrNode: Loop]
+    L1 --> A1[IrNode: Acquire]
+    L1 --> P2[IrNode: PlayPulse]
+
+    subgraph Node_Structure [IrNode Internal Structure]
+        Kind[IrKind Enum]
+        Length[TinySamples Duration]
+        Children[Vec of NodeChild]
+        Offset[Relative Offset]
+    end
+
+    P1 -.-> Kind
+    P1 -.-> Length
+    P1 -.-> Children
+    Children -.-> Offset
+```
+
 
 Rationale
 

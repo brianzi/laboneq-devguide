@@ -2,6 +2,34 @@
 
 This chapter provides a comprehensive developer-oriented overview of the runtime and controller execution components in the LabOne Q (`zhinst/laboneq`) codebase. It focuses on the abstractions and mechanisms that enable the execution of compiled quantum experiments on Zurich Instruments QCCS hardware and compatible third-party devices. The key concepts covered include the `ScheduledExperiment` data model, the `Controller` runtime orchestration, the `RecipeData` intermediate representation, near-time execution semantics, asynchronous workers, real-time step execution, result collection, callback handling, and waveform/parameter replacement flows.
 
+
+```mermaid
+graph TD
+    subgraph User_API [User API / Session]
+        Submit[Submit ScheduledExperiment]
+    end
+
+    subgraph Controller_Core [Controller Orchestration]
+        Submit --> RP[Recipe Processor]
+        RP --> RD[RecipeData]
+        RD --> NTR[Near-Time Runner]
+        NTR --> EX_WORKER[Execution Worker]
+        NTR --> RES_WORKER[Result Worker]
+    end
+
+    subgraph Hardware_Layer [Hardware Interaction]
+        EX_WORKER --> DC[Device Collection]
+        DC --> ZI_CORE[zhinst.core / LabOne]
+        ZI_CORE --> HW[QCCS Hardware]
+        HW -- "Acquisition Data" --> ZI_CORE
+        ZI_CORE --> RES_WORKER
+    end
+
+    RES_WORKER --> BUF[Result Buffers]
+    BUF --> User_API
+```
+
+
 This page is intended for developers maintaining or extending the LabOne Q runtime and controller layers. It explains what abstractions exist, why they exist, where they live in the source tree, who consumes them, and what invariants they maintain. The discussion is grounded in the inspected source code and official documentation, with explicit references to relevant files and modules.
 
 ---
@@ -406,3 +434,38 @@ sequenceDiagram
 9. Result collection: https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/controller/results.py  
 10. LabOne Q user manual, runtime architecture overview: https://docs.zhinst.com/labone_q_user_manual/core/index.html  
 11. LabOne Q README and architecture diagram: https://github.com/zhinst/laboneq/blob/main/README.md
+
+
+## Runtime execution sequence
+
+
+```mermaid
+sequenceDiagram
+    participant U as User/Session
+    participant C as Controller
+    participant NTR as Near-Time Runner
+    participant D as Device Collection
+    participant HW as Hardware
+
+    U->>C: run(ScheduledExperiment)
+    C->>C: validate_setup()
+    C->>C: prepare_recipe_data()
+    
+    C->>NTR: start_execution()
+    loop Near-Time Loop
+        NTR->>C: prepare_rt_step()
+        C->>D: upload_artifacts()
+        D->>HW: write_nodes / upload_elf
+        
+        NTR->>C: execute_rt_step()
+        C->>D: trigger_devices()
+        D->>HW: start_awg
+        
+        Note over HW: Real-Time Execution
+        
+        HW-->>D: acquisition_complete
+        D-->>C: results_ready
+    end
+    
+    C-->>U: Experiment Results
+```
