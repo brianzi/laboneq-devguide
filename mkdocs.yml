@@ -2,6 +2,7 @@ site_name: LabOne Q Developer Guide
 site_description: Developer-oriented architecture guide for zhinst/laboneq
 site_author: Manus AI
 repo_url: https://github.com/zhinst/laboneq
+
 theme:
   name: material
   features:
@@ -9,6 +10,10 @@ theme:
     - navigation.expand
     - navigation.top
     - content.code.copy
+
+extra_javascript:
+  - https://unpkg.com/mermaid@10/dist/mermaid.min.js
+
 markdown_extensions:
   - admonition
   - attr_list
@@ -22,6 +27,7 @@ markdown_extensions:
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
+
 nav:
     - LabOne Q Developer Guide: index.md
     - Ecosystem and hardware context: 01-ecosystem.md
