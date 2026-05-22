@@ -95,67 +95,66 @@ This page is not a substitute for reading source code but a structured guide to 
 LabOne Q is architected as a layered system bridging user experiment definitions to hardware execution on QCCS instruments. The architecture separates concerns into distinct layers, each with clear responsibilities, data models, and invariants.
 
 ```mermaid
-layerDiagram
-    title LabOne Q Layered Architecture
+graph TD
+    subgraph User_Software [User Software]
+        UserApplications[User Applications]
+        LabOneQDSL[LabOne Q DSL]
+    end
 
-    layer "User Software" {
-        UserApplications
-        LabOneQDSL
-    }
+    subgraph Python_DSL_Frontend [Python DSL Frontend]
+        ExperimentDSL[Experiment DSL]
+        SectionDSL[Section DSL]
+        OperationDSL[Operation DSL]
+    end
 
-    layer "Python DSL Frontend" {
-        ExperimentDSL
-        SectionDSL
-        OperationDSL
-    }
+    subgraph Payload_Bridge [Payload Builder & Compatibility Bridge]
+        ExperimentInfoBuilder[ExperimentInfoBuilder]
+        SetupHelper[SetupHelper]
+        ExperimentInfo[ExperimentInfo]
+        CompilerCompatibilityBridge[Compiler Compatibility Bridge]
+    end
 
-    layer "Payload Builder & Compatibility Bridge" {
-        ExperimentInfoBuilder
-        SetupHelper
-        ExperimentInfo
-        CompilerCompatibilityBridge
-    }
+    subgraph Rust_Compiler [Rust Compiler & Scheduler]
+        RustDSLOperations[Rust DSL Operations]
+        SchedulerPasses[Scheduler Passes]
+        IRNodes[IR Nodes]
+        ExperimentIr[Experiment IR]
+    end
 
-    layer "Rust Compiler & Scheduler" {
-        RustDSLOperations
-        SchedulerPasses
-        IRNodes
-        ExperimentIr
-    }
+    subgraph Code_Generation [Code Generation]
+        SeqCCodeGenerator[SeqC Code Generator]
+        ELFArtifacts[ELF Artifacts]
+        WaveformMaps[Waveform Maps]
+        CommandTables[Command Tables]
+    end
 
-    layer "Code Generation" {
-        SeqCCodeGenerator
-        ELFArtifacts
-        WaveformMaps
-        CommandTables
-    }
+    subgraph Runtime_Controller [Runtime & Controller]
+        ScheduledExperiment[Scheduled Experiment]
+        Controller[Controller]
+        NearTimeRunner[Near-Time Runner]
+        RecipeData[Recipe Data]
+    end
 
-    layer "Runtime & Controller" {
-        ScheduledExperiment
-        Controller
-        NearTimeRunner
-        RecipeData
-    }
+    subgraph Device_Layer [Device Communication & Hardware]
+        DeviceCollection[Device Collection]
+        DeviceZI[Device ZI]
+        LabOneDataServer[LabOne Data Server]
+        QCCSHardware[QCCS Hardware]
+    end
 
-    layer "Device Communication & Hardware" {
-        DeviceCollection
-        DeviceZI
-        LabOneDataServer
-        QCCSHardware
-    }
-
-    UserApplications --> LabOneQDSL : defines experiments
-    LabOneQDSL --> ExperimentDSL : constructs DSL tree
-    ExperimentDSL --> ExperimentInfoBuilder : lowers DSL to payload
-    ExperimentInfoBuilder --> CompilerCompatibilityBridge : converts to Rust experiment
-    CompilerCompatibilityBridge --> RustDSLOperations : Rust DSL tree
-    RustDSLOperations --> SchedulerPasses : scheduling and lowering
-    SchedulerPasses --> IRNodes : timed IR tree
-    IRNodes --> SeqCCodeGenerator : code generation
-    SeqCCodeGenerator --> ScheduledExperiment : compiled artifacts
-    ScheduledExperiment --> Controller : execution orchestration
-    Controller --> DeviceCollection : device control
-    DeviceCollection --> LabOneDataServer : communicates with hardware
+    UserApplications --> LabOneQDSL
+    LabOneQDSL --> ExperimentDSL
+    ExperimentDSL --> ExperimentInfoBuilder
+    ExperimentInfoBuilder --> CompilerCompatibilityBridge
+    CompilerCompatibilityBridge --> RustDSLOperations
+    RustDSLOperations --> SchedulerPasses
+    SchedulerPasses --> IRNodes
+    IRNodes --> SeqCCodeGenerator
+    SeqCCodeGenerator --> ScheduledExperiment
+    ScheduledExperiment --> Controller
+    Controller --> DeviceCollection
+    DeviceCollection --> LabOneDataServer
+    LabOneDataServer --> QCCSHardware
 ```
 
 ### Layer Descriptions
@@ -186,75 +185,21 @@ The developer documentation is organized into a sequence of pages, each focusing
 | `05-payload-and-compiler-input.md` | Payload Building and Compiler Inputs | Description of `ExperimentInfoBuilder`, signal mapping, calibration merging, parameter conversion, and validation. |
 | `06-compiler-overview.md` | Compiler Workflow Overview | Top-level orchestration of compilation, including chunking, scheduling, and code generation handoff. |
 | `07-ir-models.md` | Intermediate Representations | Taxonomy of IRs from Python DSL tree to Rust DSL tree, scheduled IR, and runtime execution IR. |
-| `08-rust-compiler-core.md` | Rust Compiler Core | Rust crates structure, PyO3 bindings, Cap’n Proto serialization, scheduler passes, and foreign-component boundaries. |
-| `09-scheduling-and-timing.md` | Scheduling, Timing Grids, and Section Semantics | Scheduler responsibilities, grid alignment, timing modes, repetition, precompensation, and validation. |
-| `10-code-generation-artifacts.md` | Code Generation Artifacts | SeqC/ELF generation, waveform maps, command tables, integration weights, and artifact validation. |
-| `11-runtime-controller.md` | Runtime and Controller Execution | Execution model, asynchronous workers, near-time loops, step execution, and result collection. |
-| `12-device-layer.md` | Device Communication Layer | Device abstractions, LabOne data server connections, node writes, upload/ready/done phases, and emulation. |
-| `13-results-and-data.md` | Results, Handles, and Data Shapes | Result metadata, handle mappings, chunking, and callback results. |
-| `14-extension-points.md` | Extension and Maintenance Guide | How to add DSL operations, compiler passes, device support, calibration fields, and tests. |
-| `15-source-reference.md` | Source Reference Map | Dense table of important files, classes, and functions with source links. |
-| `16-glossary.md` | Glossary | Definitions of LabOne Q and QCCS terminology and codebase terms. |
-| `references.md` | References | Consolidated numbered references to GitHub repositories and Zurich Instruments documentation. |
-
----
-
-## Summary
-
-This page has provided a foundational orientation to the LabOne Q developer ecosystem, including the purpose of the guide, a snapshot of the repository layout, a recommended reading approach, and a high-level layered architecture diagram. Subsequent pages will delve into each subsystem in detail, enabling developers to understand, maintain, and extend LabOne Q effectively.
+| `08-rust-compiler-core.md` | Rust Compiler Core | Deep dive into Rust crates for IR, scheduling, and Python bindings. |
+| `09-scheduling-and-timing.md` | Scheduling, Timing Grids, and Section Semantics | Detailed explanation of timing constraints, grid alignment, and section-level scheduling logic. |
+| `10-code-generation-artifacts.md` | Code Generation Artifacts | Mapping of scheduled IR to SeqC, ELF, command tables, and waveform pools. |
+| `11-runtime-controller.md` | Runtime and Controller Execution | Orchestration of experiment execution, near-time loops, and device interaction. |
+| `12-device-layer.md` | Device Communication Layer | Low-level device drivers, LabOne API integration, and hardware abstraction. |
+| `13-results-and-data.md` | Results, Handles, and Data Shapes | Data model for experiment results, acquisition handles, and post-processing. |
+| `14-extension-points.md` | Extension and Maintenance Guide | Guide for adding new operations, device support, or compiler passes. |
+| `15-source-reference.md` | Source Reference Map | Direct mapping of functional components to source file locations. |
+| `16-glossary.md` | Glossary | Definition of terms and acronyms used in the codebase. |
+| `references.md` | References | Links to upstream repositories, official docs, and related papers. |
 
 ---
 
 ## References used on this page
 
-1. **LabOne Q GitHub Repository**  
-   https://github.com/zhinst/laboneq  
-   *Primary source of the LabOne Q codebase, including Python and Rust components.*
-
-2. **LabOne Q README**  
-   https://github.com/zhinst/laboneq/blob/main/README.md  
-   *Contains overview and architecture diagram of LabOne Q.*
-
-3. **Python DSL Experiment Source**  
-   https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/dsl/experiment/experiment.py  
-   *Defines the main Python DSL experiment class.*
-
-4. **ExperimentInfoBuilder Source**  
-   https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/implementation/payload_builder/experiment_info_builder/experiment_info_builder.py  
-   *Converts DSL to compiler input structures.*
-
-5. **Compiler Workflow Source**  
-   https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/compiler/workflow/compiler.py  
-   *Orchestrates compilation and device-class resolution.*
-
-6. **Rust Compiler Bridge Source**  
-   https://github.com/zhinst/laboneq/blob/main/src/rust/laboneq-compiler-py/src/lib.rs  
-   *PyO3 bindings exposing Rust compiler to Python.*
-
-7. **Rust IR Crate Source**  
-   https://github.com/zhinst/laboneq/blob/main/src/rust/laboneq-ir/src/ir.rs  
-   https://github.com/zhinst/laboneq/blob/main/src/rust/laboneq-ir/src/node.rs  
-   *Defines the intermediate representation for scheduled experiments.*
-
-8. **Rust Scheduler Source**  
-   https://github.com/zhinst/laboneq/blob/main/src/rust/laboneq-scheduler/src/scheduler.rs  
-   *Implements scheduling passes and timing validation.*
-
-9. **Code Generation Source**  
-   https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/compiler/seqc/code_generator.py  
-   *Python wrapper for Rust code generation producing SeqC artifacts.*
-
-10. **Runtime Controller Source**  
-    https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/controller/controller.py  
-    *Manages experiment execution and device communication.*
-
-11. **Zurich Instruments Ecosystem Notes**  
-    *Describes related repositories such as `zhinst-toolkit` and `laboneq-applications`.*
-
-12. **LabOne Q User Manual**  
-    https://docs.zhinst.com/labone_q_user_manual/  
-    *Official user manual describing LabOne Q concepts and usage.*
-
----
-
-*End of LabOne Q Developer Guide — index.md*
+- [zhinst/laboneq Repository](https://github.com/zhinst/laboneq)
+- [LabOne Q User Manual](https://docs.zhinst.com/labone_q_user_manual/)
+- [Zurich Instruments QCCS Documentation](https://docs.zhinst.com/qccs_user_manual/)
