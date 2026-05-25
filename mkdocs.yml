@@ -40,6 +40,7 @@ nav:
       - Python DSL and compiler payload: 03-python-dsl-and-payload.md
   - Compiler pipeline:
       - Global scheduling: 04-global-scheduling.md
+      - Global scheduling implementation: 04a-global-scheduling-implementation.md
       - IR semantics: 05-ir-semantics.md
       - Backend resource mapping: 06-backend-resource-mapping.md
       - AWG-local lowering and multiplexing: 07-awg-local-lowering.md

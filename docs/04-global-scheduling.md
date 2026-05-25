@@ -44,6 +44,8 @@ graph TD
 
 The diagram intentionally labels logical signals, not AWG channels. At this point the compiler has a timed global experiment, but it has not necessarily split the tree into physical sequencer programs.
 
+For a source-grounded expansion of the four intermediate boxes in the scheduling diagram, see [Global Scheduling Implementation Mechanics](04a-global-scheduling-implementation.md). That companion chapter explains how constraint metadata is collected into `ScheduleInfo`, how left- and right-aligned child offsets are computed, how grids and repetition modes adjust lengths, and how dependency and signal-set validation is enforced.
+
 ## Scheduler contract and non-contract
 
 | Question | Scheduler answer | Later-stage answer |
