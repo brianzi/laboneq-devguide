@@ -5,34 +5,26 @@ This chapter expands the scheduling diagram from [Global Scheduling](04-global-s
 The implementation is centered in `src/rust/laboneq-scheduler/src/timing_resolver/timing_calculator.rs`. The inputs consumed by that file are prepared earlier by `src/rust/laboneq-scheduler/src/lower_experiment/mod.rs`, `local_context.rs`, and `schedule_info.rs`. A useful way to read the source is that lowering builds a `ScheduledNode` tree with **constraint metadata**, and the timing resolver then mutates only scheduling fields: child offsets, resolved lengths, absolute starts, and warnings.
 
 ```mermaid
-graph LR
-    D[DSL operation tree] --> L[lower_experiment]
-    L --> S[ScheduledNode tree\nwith ScheduleInfo metadata]
-    S --> T[timing_calculator::calculate_timing]
-    T --> R[ScheduledNode tree\nwith resolved offsets and lengths]
-    R --> V[validate_ir and later conversion]
+flowchart TD
+    A["DSL operation tree"] --> B["lower_experiment"]
+    B --> C["ScheduledNode tree with ScheduleInfo metadata"]
+    C --> D["timing_calculator calculate_timing"]
+    D --> E["ScheduledNode tree with resolved offsets and lengths"]
+    E --> F["validate_ir and later conversion"]
 
-    subgraph Lowering metadata
-        M1[signals]
-        M2[grid and sequencer_grid]
-        M3[alignment_mode]
-        M4[play_after]
-        M5[repetition_mode]
-        M6[section_timing_mode]
-    end
+    B -. "fills" .-> G["signals"]
+    B -. "fills" .-> H["grid and sequencer grid"]
+    B -. "fills" .-> I["alignment mode"]
+    B -. "fills" .-> J["play after dependencies"]
+    B -. "fills" .-> K["repetition mode"]
+    B -. "fills" .-> L["section timing mode"]
 
-    L -. fills .-> M1
-    L -. fills .-> M2
-    L -. fills .-> M3
-    L -. fills .-> M4
-    L -. fills .-> M5
-    L -. fills .-> M6
-    M1 -. consumed by .-> T
-    M2 -. consumed by .-> T
-    M3 -. consumed by .-> T
-    M4 -. consumed by .-> T
-    M5 -. consumed by .-> T
-    M6 -. consumed by .-> T
+    G -. "consumed by" .-> D
+    H -. "consumed by" .-> D
+    I -. "consumed by" .-> D
+    J -. "consumed by" .-> D
+    K -. "consumed by" .-> D
+    L -. "consumed by" .-> D
 ```
 
 ## Source map for the scheduling mechanisms
@@ -56,16 +48,16 @@ The top-level timing entry point is `calculate_timing(node, feedback_calculator)
 
 ```mermaid
 flowchart TD
-    A[calculate_timing] --> B[create CalculatorContext]
-    B --> C[calculate_node_timing(root, absolute_start = 0)]
-    C --> D{node kind}
-    D -->|Root| E[schedule_root]
-    D -->|Section / Case / Iteration| F[schedule_section]
-    D -->|Loop| G[schedule_loop]
-    D -->|Match| H[schedule_match]
-    D -->|Acquire| I[register acquisition handle]
-    D -->|Leaf play / delay / phase / init| J[keep inherited absolute start]
-    E --> K[resolve node length]
+    A["calculate_timing"] --> B["create CalculatorContext"]
+    B --> C["calculate_node_timing for root at absolute start zero"]
+    C --> D{"node kind"}
+    D -->|"Root"| E["schedule_root"]
+    D -->|"Section, case, or iteration"| F["schedule_section"]
+    D -->|"Loop"| G["schedule_loop"]
+    D -->|"Match"| H["schedule_match"]
+    D -->|"Acquire"| I["register acquisition handle"]
+    D -->|"Leaf operation"| J["keep inherited absolute start"]
+    E --> K["resolve node length"]
     F --> K
     G --> K
     H --> K
@@ -95,18 +87,18 @@ The first conceptual step, **section constraint collection**, is mostly not an a
 The grid calculation is deliberately conservative. `LocalContext::calculate_grids` iterates over the participating signals, computes an LCM of signal grids and sequencer grids, and escalates to the sequencer grid when multiple signal grids occur or a child requests sequencer-grid escalation. If the DSL requested `on_system_grid`, the system grid also participates in the LCM. This produces a single parent grid that can safely host all participating children.
 
 ```mermaid
-graph TD
-    A[lower children] --> B[collect reserved and participating signals]
-    B --> C[compute per-signal grids]
-    C --> D{multiple signal grids\nor sequencer escalation?}
-    D -->|yes| E[parent grid = LCM(system grid, sequencer grids)]
-    D -->|no| F[parent grid = LCM(system grid, signal grids)]
-    E --> G[ScheduleInfo.grid]
+flowchart TD
+    A["lower children"] --> B["collect reserved and participating signals"]
+    B --> C["compute per signal grids"]
+    C --> D{"multiple signal grids or sequencer escalation"}
+    D -->|"yes"| E["parent grid is LCM of system grid and sequencer grids"]
+    D -->|"no"| F["parent grid is LCM of system grid and signal grids"]
+    E --> G["ScheduleInfo grid"]
     F --> G
-    B --> H[ScheduleInfo.signals]
-    I[section DSL alignment] --> J[ScheduleInfo.alignment_mode]
-    K[section DSL play_after] --> L[ScheduleInfo.play_after]
-    M[section DSL timing mode] --> N[ScheduleInfo.section_timing_mode]
+    B --> H["ScheduleInfo signals"]
+    I["section DSL alignment"] --> J["ScheduleInfo alignment mode"]
+    K["section DSL play_after"] --> L["ScheduleInfo play_after"]
+    M["section DSL timing mode"] --> N["ScheduleInfo section_timing_mode"]
 ```
 
 The signal set is not a physical resource set. It is a logical timing-occupation set. If two operations mention the same logical signal, the scheduler treats them as contending for that signal’s timeline in the same section. If two different logical signals later map to the same physical AWG output or sequencer, that relationship is handled after scheduling by backend and AWG-local lowering.
@@ -119,38 +111,38 @@ For a **left-aligned** section, the algorithm scans children from left to right.
 
 ```mermaid
 flowchart TD
-    A[left-aligned section] --> B[start signal_start_constraints = empty]
-    B --> C[start play_after_constraints = empty]
-    C --> D[next child in source order]
-    D --> E[start = max(next-free time for child.signals)]
-    E --> F[start = max(start, end time of play_after predecessors)]
-    F --> G[ceil start to child grid]
-    G --> H[recursively schedule child at parent absolute start + start]
-    H --> I[child.offset = child absolute start - parent absolute start]
-    I --> J[record section end for play_after]
-    J --> K[advance next-free time for child.signals to child end]
-    K --> L{more children?}
-    L -->|yes| D
-    L -->|no| M[section children are placed]
+    A["left aligned section"] --> B["initialize signal start constraints"]
+    B --> C["initialize play_after constraints"]
+    C --> D["take next child in source order"]
+    D --> E["candidate start from next free time on child signals"]
+    E --> F["raise candidate start to predecessor section ends"]
+    F --> G["ceil candidate start to child grid"]
+    G --> H["recursively schedule child at parent start plus candidate start"]
+    H --> I["store child offset relative to parent"]
+    I --> J["record section end for play_after"]
+    J --> K["advance next free time for child signals"]
+    K --> L{"more children"}
+    L -->|"yes"| D
+    L -->|"no"| M["section children are placed"]
 ```
 
 For a **right-aligned** section, the algorithm works backwards. It visits children in reverse order, computes each child’s own length first, and then places the child as far right as possible subject to signal-end constraints and play-after-derived predecessor/successor restrictions. The temporary offsets can be negative because they are initially expressed relative to a not-yet-final section start. After all children are visited, the minimum relative offset is rounded down to the section grid. Every child offset is then shifted so that the section starts at zero, and `update_absolute_start` fixes descendants’ absolute starts.
 
 ```mermaid
 flowchart TD
-    A[right-aligned section] --> B[iterate children in reverse]
-    B --> C[recursively resolve child length]
-    C --> D[child_offset = min(end constraints on child.signals) - child.length]
-    D --> E[apply play_after constraints backwards]
-    E --> F[floor child_offset to child grid]
-    F --> G[store relative child_offset]
-    G --> H[update signal end constraints]
-    H --> I{more children?}
-    I -->|yes| B
-    I -->|no| J[relative section start = min child offsets]
-    J --> K[floor section start to section grid]
-    K --> L[subtract section start from every child offset]
-    L --> M[propagate updated absolute starts]
+    A["right aligned section"] --> B["iterate children in reverse order"]
+    B --> C["recursively resolve child length"]
+    C --> D["candidate offset from signal end constraints minus child length"]
+    D --> E["apply play_after restrictions in backward form"]
+    E --> F["floor candidate offset to child grid"]
+    F --> G["store temporary relative child offset"]
+    G --> H["update signal end constraints"]
+    H --> I{"more children"}
+    I -->|"yes"| B
+    I -->|"no"| J["relative section start is the minimum child offset"]
+    J --> K["floor section start to section grid"]
+    K --> L["subtract section start from every child offset"]
+    L --> M["propagate updated absolute starts"]
 ```
 
 The backward pass is the reason right alignment has more restrictions elsewhere. Some constructs, especially feedback-handle matches, cannot be freely shifted in a right-aligned context without changing the causal relationship between the acquisition result and the later reaction.
@@ -162,18 +154,18 @@ After children are placed, `calculate_section_length` computes the parent sectio
 This mechanism is the semantic link between local child offsets and parent duration. A section length is not simply declared; it is the smallest grid-aligned interval that contains the arranged children, unless a fixed length explicitly stretches it.
 
 ```mermaid
-graph TD
-    A[placed children] --> B[children_length = max(child.offset + child.length)]
-    B --> C[ceil children_length to section grid]
-    C --> D{fixed section length?}
-    D -->|no| E[resolve section length = children_length]
-    D -->|yes| F[ceil fixed length to section grid]
-    F --> G{children fit?}
-    G -->|no| H[scheduling error]
-    G -->|yes| I[resolve or stretch section]
-    I --> J{right aligned?}
-    J -->|yes| K[shift children by delta and update absolute starts]
-    J -->|no| L[children remain at current offsets]
+flowchart TD
+    A["placed children"] --> B["compute latest child end time"]
+    B --> C["ceil latest child end to section grid"]
+    C --> D{"fixed section length"}
+    D -->|"no"| E["resolved section length is child envelope"]
+    D -->|"yes"| F["ceil fixed length to section grid"]
+    F --> G{"children fit inside fixed length"}
+    G -->|"no"| H["scheduling error"]
+    G -->|"yes"| I["resolve or stretch section"]
+    I --> J{"right aligned section"}
+    J -->|"yes"| K["shift children and update absolute starts"]
+    J -->|"no"| L["children remain at current offsets"]
 ```
 
 ## Grid and repetition adjustment
@@ -190,17 +182,17 @@ Loop scheduling adds another layer of adjustment. In a generic fastest loop, ite
 
 ```mermaid
 flowchart TD
-    A[schedule_loop] --> B{compressed?}
-    B -->|yes| C[schedule one iteration body]
-    C --> D[adjust body to compressed-loop grid]
-    D --> E[loop length = body length * iteration count]
-    B -->|no| F{repetition mode}
-    F -->|constant| G[each iteration must fit requested repetition time]
-    G --> H[stretch each iteration to repetition time]
-    F -->|auto| I[schedule all iterations and find longest]
-    I --> J[stretch every iteration to longest]
-    F -->|fastest or none| K[schedule iterations sequentially]
-    K --> L[ceil each iteration length to loop grid]
+    A["schedule_loop"] --> B{"compressed loop"}
+    B -->|"yes"| C["schedule one representative iteration body"]
+    C --> D["adjust body to compressed loop grid"]
+    D --> E["loop length is body length times iteration count"]
+    B -->|"no"| F{"repetition mode"}
+    F -->|"constant"| G["check each iteration fits requested repetition time"]
+    G --> H["stretch each iteration to repetition time"]
+    F -->|"auto"| I["schedule all iterations and find longest duration"]
+    I --> J["stretch every iteration to longest duration"]
+    F -->|"fastest or none"| K["schedule iterations sequentially"]
+    K --> L["ceil each iteration length to loop grid"]
 ```
 
 The loop mechanisms preserve the same tree semantics as section scheduling. They do not duplicate waveform events at scheduling time merely because a loop has many iterations. Compressed loops are especially important: the tree contains one representative iteration with a multiplied loop length, leaving later compiler stages to decide how that repetition is represented in generated artifacts.
@@ -210,15 +202,12 @@ The loop mechanisms preserve the same tree semantics as section scheduling. They
 Loop iteration preambles have special scheduling rules. The scheduler places PPC sweep steps and oscillator-frequency sweep steps at time zero because they are treated as non-overlapping control updates before observable pulse or acquisition activity. Phase resets are different because their timing relative to later pulses affects observed phase. The implementation therefore aligns phase resets to the relevant grid and places them after the previous preamble steps.
 
 ```mermaid
-gantt
-    title Loop iteration preamble placement
-    dateFormat X
-    axisFormat %L
-    section Preamble
-    PPC and oscillator frequency steps :a1, 0, 4
-    Grid-aligned phase resets :a2, 4, 2
-    section Body
-    First observable pulse/acquire :a3, 6, 4
+flowchart TD
+    A["loop iteration preamble"] --> B["PPC sweep steps at time zero"]
+    B --> C["oscillator frequency sweep steps at time zero"]
+    C --> D["phase resets aligned to relevant grid"]
+    D --> E["first observable pulse or acquisition"]
+    E --> F["remaining iteration body"]
 ```
 
 This is another example of the scheduler’s global-time semantics. It does not synthesize the waveforms for oscillator updates, but it does decide where the update operations belong in the logical timeline when their position is observable.
@@ -230,14 +219,14 @@ There are two classes of dependency enforcement. The first class is **placement 
 The second class is **structural validation**, implemented by `analysis/validate_ir.rs`. It checks constraints that are better expressed as legality conditions than as offset equations. For example, a `play_after` reference must point to a section that was already seen at the same sibling level. A handle-based `match` cannot be inside auto repetition mode or directly under a right-aligned parent section. Acquisitions are disallowed inside certain match targets when the match target is not a sweep parameter.
 
 ```mermaid
-graph TD
-    A[dependency or signal rule] --> B{can it be expressed as timing placement?}
-    B -->|yes| C[apply during arrange_left_aligned or arrange_right_aligned]
-    B -->|no| D[check in validate_ir]
-    C --> E[child offsets and lengths]
-    D --> F{legal?}
-    F -->|yes| G[continue]
-    F -->|no| H[compile-time scheduling error]
+flowchart TD
+    A["dependency or signal rule"] --> B{"expressible as placement constraint"}
+    B -->|"yes"| C["apply in left or right arrangement"]
+    B -->|"no"| D["check in validate_ir"]
+    C --> E["child offsets and lengths"]
+    D --> F{"legal structure"}
+    F -->|"yes"| G["continue scheduling pipeline"]
+    F -->|"no"| H["compile time scheduling error"]
 ```
 
 Signal-set validation is deliberately limited to logical timing occupation. When a section’s signal set is propagated upward, the scheduler uses it to know which signals impose serialization constraints and which grids must be combined. It does not interpret the signal set as a list of physical waveform lanes. That separation is essential: a section may be valid globally even if later physical resource lowering has to merge, reject, or split operations because of AWG-specific constraints.
@@ -247,23 +236,16 @@ Signal-set validation is deliberately limited to logical timing occupation. When
 Feedback-dependent `match` sections add a causal dependency that is neither ordinary signal serialization nor simple `play_after`. When the scheduler sees an acquisition, it records the latest acquisition for the acquisition handle in the calculator context. When it later schedules a `match` whose target is a handle, it asks the feedback-latency calculator for the earliest time at which the execute-table entry can be available. If that time is later than the match’s current start, the match is shifted later in relaxed timing mode or rejected in strict timing mode.
 
 ```mermaid
-sequenceDiagram
-    participant A as Acquire node
-    participant C as CalculatorContext
-    participant M as Handle match node
-    participant F as FeedbackCalculator
-
-    A->>C: register handle, signal, length, absolute_start
-    M->>C: look up latest acquisition for handle
-    M->>F: compute_feedback_latency(acquire start, length, locality, reaction signals)
-    F-->>M: earliest execute-table time
-    M->>M: ceil earliest time to match grid
-    alt relaxed mode and delay needed
-        M->>C: add MatchStartShifted warning
-        M->>M: start = max(start, earliest time)
-    else strict mode and delay needed
-        M->>M: return scheduling error
-    end
+flowchart TD
+    A["acquire node"] --> B["register handle, signal, length, and absolute start"]
+    B --> C["CalculatorContext stores latest acquisition for handle"]
+    C --> D["handle match node reads latest acquisition"]
+    D --> E["FeedbackCalculator computes earliest reaction time"]
+    E --> F["ceil reaction time to match grid"]
+    F --> G{"delay needed"}
+    G -->|"no"| H["keep current match start"]
+    G -->|"yes and relaxed mode"| I["shift match start and add warning"]
+    G -->|"yes and strict mode"| J["return scheduling error"]
 ```
 
 This mechanism explains why feedback scheduling must run with absolute-start knowledge and why acquisition events are re-registered when absolute starts move. The correctness condition is causal: a feedback reaction must not be scheduled before the controller and device path can make the acquisition result available to the later match operation.
@@ -286,15 +268,14 @@ A practical debugging sequence follows the same order. First check whether the c
 Consider a left-aligned section with three children: a pulse on `q0/drive`, a second pulse on the same signal, and a readout acquisition on `q0/measure`. The scheduler does not know or care whether these logical signals later share an AWG core. It only knows their logical signal sets and grids.
 
 ```mermaid
-gantt
-    title Left-aligned logical scheduling example
-    dateFormat X
-    axisFormat %L
-    section q0/drive
-    play pulse A :a1, 0, 4
-    play pulse B :a2, 4, 3
-    section q0/measure
-    acquire C :c1, 0, 5
+flowchart TD
+    A["left aligned parent section"] --> B["child A: drive pulse from t0 to t4"]
+    B --> C["child B: drive pulse starts at t4 on same logical signal"]
+    A --> D["child C: measure acquire from t0 to t5"]
+    C --> E["drive signal envelope ends at t7"]
+    D --> F["measure signal envelope ends at t5"]
+    E --> G["section length is max of logical signal envelopes"]
+    F --> G
 ```
 
 The two drive pulses serialize because they occupy the same logical signal. The acquisition may start at the same section offset as the first drive pulse because it occupies a different logical signal. If a later backend mapping says that two logical signals share a physical generator or sequencer, that is a later lowering problem; the global scheduler has already done its job by producing a consistent logical-time solution.
