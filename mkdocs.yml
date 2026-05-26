@@ -60,6 +60,7 @@ markdown_extensions:
 nav:
   - Orientation:
       - Guide overview: index.md
+      - User-facing interfaces and frontend internals: 02a-user-facing-interfaces.md
       - Mental model: 01-mental-model.md
       - Repository and build map: 02-repository-and-build-map.md
       - Ecosystem and hardware context: 10-ecosystem-and-hardware.md

@@ -20,10 +20,11 @@ graph TD
 
 ## Reading order
 
-The guide is now organized into four semantic bands rather than into a main text plus miscellaneous appendices. **Orientation** gives the reader the vocabulary, repository map, and hardware ecosystem needed to read the source. **Compilation pipeline** follows the lowering path from Python payload to scheduled IR, AWG-local waveform construction, and uploadable artifacts. **Runtime and data semantics** covers how those artifacts are interpreted by the controller, how instruments are operated, and how acquired data is shaped. **Maintenance reference** contains change-point and lookup material.
+The guide is now organized into four semantic bands rather than into a main text plus miscellaneous appendices. **Orientation** gives the reader the vocabulary, user-facing entry points, repository map, and hardware ecosystem needed to read the source. **Compilation pipeline** follows the lowering path from Python payload to scheduled IR, AWG-local waveform construction, and uploadable artifacts. **Runtime and data semantics** covers how those artifacts are interpreted by the controller, how instruments are operated, and how acquired data is shaped. **Maintenance reference** contains change-point and lookup material.
 
 | Section | Chapter | Focus | Main boundary clarified |
 | --- | --- | --- | --- |
+| Orientation | [User-facing interfaces and frontend internals](02a-user-facing-interfaces.md) | DSL, `DeviceSetup`, serialization, `Session`, controller APIs, and pulse sheet viewer | Ordinary Python execution and frontend state versus compiler payloads and runtime submission. |
 | Orientation | [Mental model](01-mental-model.md) | Vocabulary and semantic domains | Logical experiment language versus physical resources. |
 | Orientation | [Repository and build map](02-repository-and-build-map.md) | Source-tree orientation | Python packages, Rust crates, generated extension modules, and dependency roles. |
 | Orientation | [Ecosystem and hardware context](10-ecosystem-and-hardware.md) | Related repos and device constraints | LabOne Q relative to toolkit, comms, examples, and manuals. |

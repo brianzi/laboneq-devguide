@@ -23,7 +23,10 @@ Maintainers should use this page as a quick lookup to understand where functiona
 
 | Module path | Primary responsibility | Key classes/functions | Consumers | Notes |
 |-------------|------------------------|----------------------|-----------|-------|
-| `laboneq.dsl.experiment` | User-facing Python DSL for experiment definition | `Experiment`, `Section`, `AcquireLoopRt`, `Sweep`, `Match`, `Case` | User scripts, payload builder | Defines the frontend experiment tree and DSL operations [src/python/laboneq/dsl/experiment/experiment.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/dsl/experiment/experiment.py) |
+| `laboneq.dsl.experiment` | User-facing Python DSL for experiment definition | `Experiment`, `Section`, `AcquireLoopRt`, `Sweep`, `Match`, `Case`, context-manager builtins | User scripts, payload builder | Defines the frontend experiment tree, DSL operation helpers, and context-manager construction semantics [src/python/laboneq/dsl/experiment/experiment.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/dsl/experiment/experiment.py) |
+| `laboneq.dsl.device` | User-facing setup, logical-signal, and calibration model | `DeviceSetup`, instruments, logical signal groups, physical channels | Session, compiler workflow, controller setup conversion | Represents the experiment-to-hardware boundary before backend resource mapping [src/python/laboneq/dsl/device/device_setup.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/dsl/device/device_setup.py) |
+| `laboneq.dsl.session` | Stateful user-facing compilation and execution façade | `Session.compile()`, `Session.run()`, `Session.submit()`, `show_pulse_sheet()` | User scripts, controller, pulse sheet viewer | Holds frontend state and bridges compiled experiments into runtime submission [src/python/laboneq/dsl/session.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/dsl/session.py) |
+| `laboneq.serializers` | Versioned JSON/YAML persistence for public LabOne Q objects | `to_dict`, `from_dict`, public serializers | User persistence, offline workflows, compatibility migration | Serializes experiments, setups, compiled experiments, results, quantum elements, and workflow objects [src/python/laboneq/serializers/core.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/serializers/core.py) |
 | `laboneq.implementation.payload_builder` | Converts DSL + setup into compiler input payloads | `ExperimentInfoBuilder` | Compiler workflow | Builds `ExperimentInfo` data structures for compiler input [src/python/laboneq/implementation/payload_builder/experiment_info_builder/experiment_info_builder.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/implementation/payload_builder/experiment_info_builder/experiment_info_builder.py) |
 | `laboneq.compiler.workflow` | Orchestration of compilation pipeline | `Compiler`, `RealtimeCompiler`, compatibility bridge functions | User-facing compile API, controller | Coordinates Python-to-Rust handoff, scheduling, code generation [src/python/laboneq/compiler/workflow/compiler.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/compiler/workflow/compiler.py) |
 | `laboneq.compiler.scheduler` | Scheduling and timing grid enforcement | `Scheduler` | Compiler workflow | Implements scheduling passes, timing validation, chunking [src/python/laboneq/compiler/scheduler/scheduler.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/compiler/scheduler/scheduler.py) |
@@ -57,9 +60,28 @@ The following tables list important source files, classes, and functions, with e
 | File | Key classes/functions | Description | Source link |
 |-------|----------------------|-------------|-------------|
 | `src/python/laboneq/dsl/experiment/experiment.py` | `Experiment` | Main user-facing container for experiment definition. Holds sections, parameters, and device-agnostic experiment structure. | [experiment.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/dsl/experiment/experiment.py) |
+| `src/python/laboneq/dsl/experiment/builtins.py` | `experiment`, `section`, `sweep`, `play`, `acquire`, `measure`, `map_signal` | Public DSL helper layer that users import; helpers create context managers or append operations to the active context. | [builtins.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/dsl/experiment/builtins.py) |
+| `src/python/laboneq/dsl/experiment/context.py` | `push_context`, `pop_context`, `peek_context`, `iter_contexts` | Thread-local context stack used by experiment and section managers during ordinary Python execution. | [context.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/dsl/experiment/context.py) |
+| `src/python/laboneq/dsl/experiment/experiment_context.py` | `ExperimentContextManager`, `ExperimentContext` | Creates the active experiment object and applies deferred experiment calibration when the context exits successfully. | [experiment_context.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/dsl/experiment/experiment_context.py) |
+| `src/python/laboneq/dsl/experiment/section_context.py` | Section context-manager classes | Creates section objects, pushes nested section contexts, and auto-attaches completed sections to their parent. | [section_context.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/dsl/experiment/section_context.py) |
 | `src/python/laboneq/dsl/experiment/section.py` | `Section`, `AcquireLoopRt`, `Sweep`, `Match`, `Case` | Defines concrete DSL tree nodes representing experiment sections, real-time acquisition loops, parameter sweeps, and conditional branches. | [section.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/dsl/experiment/section.py) |
 
 These modules implement the Python DSL that users interact with to define quantum experiments. The `Experiment` class is the root container, while `Section` and its subclasses represent nested blocks with timing, triggers, and operations. The DSL supports real-time loops (`AcquireLoopRt`), near-time sweeps (`Sweep`), and conditional control flow (`Match`, `Case`). These classes carry invariants such as unique identifiers (`uid`), timing alignment, and execution type constraints.
+
+---
+
+### Setup, serialization, and visualization frontend
+
+| File | Key classes/functions | Description | Source link |
+|-------|----------------------|-------------|-------------|
+| `src/python/laboneq/dsl/device/device_setup.py` | `DeviceSetup`, calibration helpers, descriptor loaders | User-facing setup model for data servers, instruments, logical signal groups, physical channels, qubits, calibration, and optional system description. | [device_setup.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/dsl/device/device_setup.py) |
+| `src/python/laboneq/serializers/core.py` | `to_dict`, `from_dict`, `save`, `load` | Central serializer dispatch for public JSON/YAML persistence using versioned serializer envelopes and registry lookup. | [core.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/serializers/core.py) |
+| `src/python/laboneq/serializers/implementations/experiment.py` | `ExperimentSerializer` | Versioned serializer for DSL experiments, including signals, sections, DSL version, epsilon, and migration hooks. | [experiment.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/serializers/implementations/experiment.py) |
+| `src/python/laboneq/serializers/implementations/device_setup.py` | `DeviceSetupSerializer` | Versioned serializer for setup topology, logical and physical channel groups, qubits, and system description. | [device_setup.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/serializers/implementations/device_setup.py) |
+| `src/python/laboneq/serializers/implementations/compiled_experiment.py` | `CompiledExperimentSerializer`, `ScheduledExperimentSerializer` | Persists compiled artifacts with nested setup, experiment, compiler dictionary, scheduled experiment, and LabOne Q version checks. | [compiled_experiment.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/serializers/implementations/compiled_experiment.py) |
+| `src/python/laboneq/pulse_sheet_viewer/pulse_sheet_viewer.py` | `show_pulse_sheet`, `OutputSimulator` integration | Renders static or interactive pulse sheets from compiled schedule metadata and simulated signal snippets. | [pulse_sheet_viewer.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/pulse_sheet_viewer/pulse_sheet_viewer.py) |
+
+These modules form the user-facing boundary around compilation. They decide how setup descriptions, serialized artifacts, and compiled-schedule visualizations are represented before or after the core compiler pipeline.
 
 ---
 
@@ -144,12 +166,15 @@ After scheduling, the code generator produces device-specific source code and ar
 
 | File | Key classes/functions | Description | Source link |
 |-------|----------------------|-------------|-------------|
+| `src/python/laboneq/dsl/session.py` | `Session`, `compile()`, `run()`, `submit()` | Stateful frontend façade that stores setup, experiment, compiled experiment, callbacks, connection state, and last results while bridging into compilation and controller submission. | [session.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/dsl/session.py) |
 | `src/python/laboneq/controller/controller.py` | `Controller` | Manages experiment execution, device connections, asynchronous workers, and result collection. | [controller.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/controller/controller.py) |
+| `src/python/laboneq/controller/api/local_controller.py` | `LocalController` | Synchronous handle-based local execution API over scheduled experiments and the lower controller. | [local_controller.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/controller/api/local_controller.py) |
+| `src/python/laboneq/controller/api/async_local_controller.py` | `AsyncLocalController` | Asynchronous handle-based local execution API that exposes explicit submit, wait, status, results, cancel, and cleanup operations. | [async_local_controller.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/controller/api/async_local_controller.py) |
 | `src/python/laboneq/controller/near_time_runner.py` | `NearTimeRunner` | Executes near-time loops, manages sweep parameters, and invokes callbacks. | [near_time_runner.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/controller/near_time_runner.py) |
 | `src/python/laboneq/controller/recipe_processor.py` | `RecipeData` builder | Processes scheduled experiment into runtime recipe data, device configs, and waveform preparation helpers. | [recipe_processor.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/controller/recipe_processor.py) |
 | `src/python/laboneq/data/scheduled_experiment.py` | `ScheduledExperiment` | Bundles compiled experiment artifacts, recipe, near-time execution tree, and result metadata. | [scheduled_experiment.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/data/scheduled_experiment.py) |
 
-The controller package implements the runtime execution environment. The `Controller` class orchestrates device communication, experiment submission, and asynchronous execution. The `NearTimeRunner` manages near-time parameter sweeps and callbacks. `RecipeProcessor` converts compilation outputs into device-specific runtime recipes.
+The controller package implements the runtime execution environment. The `Session` façade remains the broad user-facing entry point because it owns frontend state and can compile before execution. `LocalController` and `AsyncLocalController` expose a cleaner handle-based runtime boundary for scheduled experiments. The `Controller` class orchestrates device communication, experiment submission, and asynchronous execution. The `NearTimeRunner` manages near-time parameter sweeps and callbacks. `RecipeProcessor` converts compilation outputs into device-specific runtime recipes.
 
 ---
 
@@ -320,7 +345,7 @@ The Rust DSL crate defines the normalized operation tree consumed by the schedul
 
 ---
 
-### Rust QCCS backend preprocessing
+### Rust QCCS backend preprocessing lookup
 
 | File path | Description | Key structs/functions | Source link |
 |-----------|-------------|----------------------|-------------|
@@ -364,7 +389,7 @@ Device classes encapsulate hardware-specific communication, setup, upload, execu
 
 ---
 
-### Near-time execution IR
+### Near-time execution IR lookup
 
 | File path | Description | Key classes/functions | Source link |
 |-----------|-------------|----------------------|-------------|

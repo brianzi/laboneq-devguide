@@ -2,7 +2,7 @@
 
 The Python DSL is a construction API for an experiment object graph. It is intentionally more permissive and ergonomic than the compiler's later representations. Users build experiments with context managers for sections, sweeps, acquire loops, matches, and callbacks; operations such as play, delay, acquire, reserve, and call are attached to sections. Logical signals connect those operations to roles in a device setup.
 
-This chapter stops at the compiler input boundary. It does not describe scheduling, AWG grouping, or waveform merging. Those semantics are introduced later.
+This chapter starts after the frontend mechanics described in [User-facing interfaces and frontend internals](02a-user-facing-interfaces.md). It assumes that Python context managers have already produced an `Experiment`, that setup and calibration information are available, and that the task is now to form compiler input. It stops at the compiler input boundary and does not describe scheduling, AWG grouping, or waveform merging. Those semantics are introduced later.
 
 ## Experiment object graph
 
