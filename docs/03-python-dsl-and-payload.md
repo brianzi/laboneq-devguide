@@ -46,6 +46,36 @@ The workflow files in `src/python/laboneq/compiler/workflow` adapt Python-side d
 | Payload to Rust compiler | `compiler/workflow/compat.py`, `realtime_compiler.py` | Normalized experiment/setup/parameter data suitable for Rust preprocessing and scheduling. |
 | Rust result to Python | `compiler/seqc/code_generator.py`, `data/scheduled_experiment.py` | Recipe, generated code, waveforms, command tables, result metadata, execution metadata. |
 
+## Compiler settings at the payload boundary
+
+`Session.compile(..., compiler_settings=...)` and `Session.run(..., compiler_settings=...)` pass a user-supplied dictionary into the compilation workflow. This dictionary is intentionally not interpreted by the DSL layer. Its first significant normalization happens near the Python-to-Rust compatibility bridge, where `compiler/workflow/compat.py` sanitizes selected values before passing the remaining dictionary to the Rust compiler representation builder.
+
+```mermaid
+graph TD
+    A[Session.compile or compile_experiment] --> B[Compiler workflow]
+    B --> C[Python CompilerSettings subset]
+    B --> D[Payload and setup compatibility conversion]
+    D --> E[Sanitize compiler_settings dictionary]
+    E --> F[Rust experiment builder]
+    F --> G[Realtime compiler, scheduler, linker, codegen]
+    G --> H[Reporter and ScheduledExperiment output]
+```
+
+The Python dataclass currently models only the settings consumed directly by Python-side code: `LOG_REPORT` and `IGNORE_RESOURCE_LIMITATION_ERRORS`. The compiler settings file explicitly notes that the remaining settings are processed in the Rust compiler. This split is important when reading the pipeline: some settings affect Python reporting or post-check behaviour, while others are forwarded after light validation and change lower-level compilation behaviour.
+
+| Setting or setting family | First visible handling point | Effect in the pipeline |
+| --- | --- | --- |
+| `LOG_REPORT` | Python `CompilerSettings` and compilation reporter. | Controls whether the post-compilation report is logged. |
+| `IGNORE_RESOURCE_LIMITATION_ERRORS` | Python resource-usage handling. | Allows compilation to continue past resource-limit reports that would otherwise be treated as errors. |
+| `MAX_EVENTS_TO_PUBLISH` | `compat._sanitize_compiler_settings`. | Converted from float to integer if needed; warned as ineffective unless `OUTPUT_EXTRAS=True` is also set. |
+| `OUTPUT_EXTRAS` | Forwarded to lower compiler stages. | Enables extra schedule metadata used by diagnostics such as the pulse sheet viewer. |
+| `AMPLITUDE_RESOLUTION_BITS` and `PHASE_RESOLUTION_BITS` | `compat._sanitize_compiler_settings`. | Clamped to non-negative integers before being forwarded. |
+| Deprecated or inert command-table hints | `compat._sanitize_compiler_settings`. | Warnings are emitted and no-effect settings may be removed before forwarding. |
+
+The pulse-sheet viewer is a concrete example of these settings in practice. If a compiled experiment lacks the schedule extras needed for rendering, the viewer recompiles with `OUTPUT_EXTRAS=True`, disables normal report logging, and raises `MAX_EVENTS_TO_PUBLISH` so that event-list metadata is available for the HTML view. This does not mean the DSL changed; it means the compiler was asked to publish additional diagnostic output.
+
+Later compilation chapters should treat individual settings at the stage where they first alter behaviour. Settings that affect schedule metadata belong near schedule and reporting. Settings that affect waveform or command-table generation belong near code generation. Settings that affect resource-limit handling belong near backend resource mapping and resource usage. Keeping this discussion distributed avoids implying that `compiler_settings` is a single monolithic preprocessor switch.
+
 ## Invariants handed to scheduling
 
 By the time the scheduler receives the experiment, the compiler should have a normalized description of the experiment hierarchy, signal names, operation metadata, and relevant setup/calibration information. The scheduler can then reason about timing constraints without needing the original Python context-manager machinery.

@@ -20,11 +20,12 @@ graph TD
 
 ## Reading order
 
-The guide is now organized into four semantic bands rather than into a main text plus miscellaneous appendices. **Orientation** gives the reader the vocabulary, user-facing entry points, repository map, and hardware ecosystem needed to read the source. **Compilation pipeline** follows the lowering path from Python payload to scheduled IR, AWG-local waveform construction, and uploadable artifacts. **Runtime and data semantics** covers how those artifacts are interpreted by the controller, how instruments are operated, and how acquired data is shaped. **Maintenance reference** contains change-point and lookup material.
+The guide is now organized into five semantic bands rather than into a main text plus miscellaneous appendices. **Orientation** gives the reader the vocabulary, user-facing entry points, serialization boundary, repository map, and hardware ecosystem needed to read the source. **Compilation pipeline** follows the lowering path from Python payload to scheduled IR, AWG-local waveform construction, and uploadable artifacts. **Runtime and data semantics** covers how those artifacts are interpreted by the controller, how instruments are operated, and how acquired data is shaped. **Higher-level layers** closes the loop by explaining quantum objects and workflows as application-facing producers and consumers of lower-level LabOne Q artifacts. **Maintenance reference** contains change-point and lookup material.
 
 | Section | Chapter | Focus | Main boundary clarified |
 | --- | --- | --- | --- |
-| Orientation | [User-facing interfaces and frontend internals](02a-user-facing-interfaces.md) | DSL, `DeviceSetup`, serialization, `Session`, controller APIs, and pulse sheet viewer | Ordinary Python execution and frontend state versus compiler payloads and runtime submission. |
+| Orientation | [User-facing interfaces and frontend internals](02a-user-facing-interfaces.md) | DSL, `DeviceSetup`, `Session`, controller APIs, signal maps, and frontend state | Ordinary Python execution and frontend state versus compiler payloads and runtime submission. |
+| Orientation | [Serialization and pulse-sheet inspection](02b-serialization-and-pulse-sheets.md) | Experiment and `CompiledExperiment` serialization, waveform encoding, deduplication, and pulse-sheet viewer internals | Persisted intent and compiled artifacts versus diagnostic visualization metadata. |
 | Orientation | [Mental model](01-mental-model.md) | Vocabulary and semantic domains | Logical experiment language versus physical resources. |
 | Orientation | [Repository and build map](02-repository-and-build-map.md) | Source-tree orientation | Python packages, Rust crates, generated extension modules, and dependency roles. |
 | Orientation | [Ecosystem and hardware context](10-ecosystem-and-hardware.md) | Related repos and device constraints | LabOne Q relative to toolkit, comms, examples, and manuals. |
@@ -38,6 +39,7 @@ The guide is now organized into four semantic bands rather than into a main text
 | Runtime and data semantics | [Runtime controller](09-runtime-controller.md) | Execution and result collection | Compiled experiment versus asynchronous device actions. |
 | Runtime and data semantics | [Device communication layer](12-device-layer.md) | Instrument node operations and device abstractions | Controller intent versus LabOne data-server communication. |
 | Runtime and data semantics | [Results, handles, and data shapes](13-results-and-data.md) | Acquired data semantics | Runtime buffers versus returned user-facing result arrays. |
+| Higher-level layers | [Quantum objects and workflows](17-quantum-objects-and-workflows.md) | QPU, quantum elements, quantum operations, workflow tasks, and calibration feedback | Higher-order application abstractions versus ordinary DSL experiments, compiled experiments, and result objects. |
 | Maintenance reference | [Extension and maintenance guide](11-extension-and-maintenance.md) | Practical change points | Where to change the compiler safely. |
 | Maintenance reference | [Source reference map](15-source-reference.md) | File-level lookup map | Conceptual stages versus implementation files. |
 | Maintenance reference | [Glossary](16-glossary.md) | Terminology lookup | Stable vocabulary across chapters. |

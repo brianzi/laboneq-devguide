@@ -61,6 +61,7 @@ nav:
   - Orientation:
       - Guide overview: index.md
       - User-facing interfaces and frontend internals: 02a-user-facing-interfaces.md
+      - Serialization and pulse-sheet inspection: 02b-serialization-and-pulse-sheets.md
       - Mental model: 01-mental-model.md
       - Repository and build map: 02-repository-and-build-map.md
       - Ecosystem and hardware context: 10-ecosystem-and-hardware.md
@@ -76,6 +77,8 @@ nav:
       - Runtime controller: 09-runtime-controller.md
       - Device communication layer: 12-device-layer.md
       - Results, handles, and data shapes: 13-results-and-data.md
+  - Higher-level layers:
+      - Quantum objects and workflows: 17-quantum-objects-and-workflows.md
   - Maintenance reference:
       - Extension and maintenance guide: 11-extension-and-maintenance.md
       - Source reference map: 15-source-reference.md
