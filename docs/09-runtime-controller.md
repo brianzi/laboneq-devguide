@@ -67,24 +67,19 @@ The recipe should be read as a **declarative runtime instruction graph**, not as
 The runtime semantics of near-time control come from the executor statement tree. The executor walks statements such as loops, parameter assignments, callbacks, and real-time entries. In the normal controller path, `NearTimeRunner` uses `LoopingMode.NEAR_TIME_ONLY`: Python executes near-time control flow, while each real-time block is represented by a notification to the controller rather than by interpreting the real-time block body in Python.[3][6]
 
 ```mermaid
-sequenceDiagram
-    participant Exec as AsyncExecutorBase
-    participant NTR as NearTimeRunner
-    participant Ctrl as Controller
-    participant Dev as Device classes
-    participant Res as Result collector
-
-    Exec->>NTR: for_loop_entry(index)
-    Exec->>NTR: set_sw_param(name, value)
-    Exec->>NTR: nt_callback(func,args)
-    NTR->>NTR: wait for previous step result if needed
-    Exec->>NTR: rt_entry(uid,count,mode,type)
-    NTR->>Ctrl: _execute_one_step(nt_step, sweep params, user node sets)
-    Ctrl->>Dev: configure/upload/arm/start
-    Ctrl->>Res: submit result collection for this step
-    Dev-->>Ctrl: done / status / errors
-    Res-->>NTR: per-step result future completes
-    Exec->>NTR: for_loop_exit(index)
+flowchart TD
+    A[AsyncExecutorBase enters near-time loop] --> B[NearTimeRunner records loop index]
+    B --> C[Apply software parameter updates]
+    C --> D[Invoke near-time callback]
+    D --> E[Wait for previous step result if needed]
+    E --> F[AsyncExecutorBase reports real-time entry]
+    F --> G[NearTimeRunner calls controller step execution]
+    G --> H[Device classes configure, upload, arm, and start]
+    G --> I[Result collector receives step collection job]
+    H --> J[Device status, completion, or errors]
+    I --> K[Per-step result future completes]
+    J --> L[NearTimeRunner exits near-time loop]
+    K --> L
 ```
 
 The `NearTimeRunner` keeps the current near-time loop indices as an `NtStepKey`, tracks software sweep parameters in a `SweepParamsTracker`, accumulates user node writes in a `NodeCollector`, and invokes registered near-time callbacks. Before a new callback is allowed to inspect partial results, the runner waits for the previous step's result future to complete, preserving the existing partial-result semantics under the asynchronous implementation.[6]
@@ -146,7 +141,7 @@ The practical mental model is that the controller can **select, upload, patch, q
 Result handling is concurrent with the experiment lifecycle, but it is still structural rather than analytical. A separate result-collection worker receives per-step collection jobs. The `ResultsBuilder` is allocated before execution from `ResultShapeInfo`, and it pre-fills every declared handle array with complex `NaN` values. Each result handle therefore has a complete target shape, axes, optional match/case mask, and optional chunked axis before the first data point arrives.[5][10]
 
 ```mermaid
-flowchart LR
+flowchart TD
     Dev[Device result node or logger] --> RS[ResultSource]
     RS --> Map[result_handle_maps]
     Map --> H[logical handle]

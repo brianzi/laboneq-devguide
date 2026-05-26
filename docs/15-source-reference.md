@@ -207,7 +207,7 @@ graph TD
 ### Compilation pipeline detail
 
 ```mermaid
-graph LR
+graph TD
   DSL[Python DSL Experiment]
   Payload[ExperimentInfoBuilder]
   Compat[Compatibility Bridge (build_rs_experiment)]
@@ -233,20 +233,14 @@ graph LR
 ### Runtime execution sequence
 
 ```mermaid
-sequenceDiagram
-  participant User
-  participant Controller
-  participant Devices
-  participant Hardware
-
-  User->>Controller: submit_compiled(ScheduledExperiment)
-  Controller->>Devices: validate_and_prepare_recipe()
-  Controller->>Devices: upload_waveforms_and_code()
-  Controller->>Devices: start_execution()
-  Devices->>Hardware: trigger_start()
-  Hardware-->>Devices: execution_complete()
-  Devices-->>Controller: notify_completion()
-  Controller-->>User: deliver_results()
+flowchart TD
+  User[User submits ScheduledExperiment] --> Controller[Controller validates and prepares recipe]
+  Controller --> Upload[Devices upload waveforms and code]
+  Upload --> Start[Devices start execution]
+  Start --> Hardware[Hardware trigger start]
+  Hardware --> Complete[Hardware execution complete]
+  Complete --> Notify[Devices notify controller]
+  Notify --> Results[Controller delivers results]
 ```
 
 ---

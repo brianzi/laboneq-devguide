@@ -13,7 +13,7 @@ The guide uses five semantic layers. The layers are not merely implementation pa
 | AWG-local program model | per-AWG `IrNode` trees, virtual signals, `PlayWave` nodes, waveform signatures | The scheduled experiment has been split by sequencer core and logical pulses have been merged into physical waveform events. |
 
 ```mermaid
-graph LR
+graph TD
     subgraph Logical[Logical experiment language]
       L1[logical signal ids]
       L2[pulse and acquire operations]

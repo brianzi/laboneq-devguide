@@ -45,7 +45,7 @@ The conversion from `ScheduledNode` to `IrNode` is not a no-op rename. It is a m
 The most useful way to think about the IRs is not “tree versus DAG” in the abstract. LabOne Q primarily preserves nested trees because loops, sections, match/case constructs, and cut points must remain structured for sequencer code. The physical waveform data associated with nodes is not simply another child tree; it is formed by grouping and interval analysis over AWG-local pulse slots. A scheduled tree can therefore contain two logical pulses at overlapping times while still being semantically correct; only the AWG-local lowering stage determines whether those two leaves become one physical `PlayWave`, several `PlayWave`s separated by cut points, or an error because the shared resource cannot represent the requested oscillator/modulation combination.
 
 ```mermaid
-graph LR
+graph TD
     A[Rust operation tree\nsemantic nesting] --> B[ScheduledNode tree\ntimed nesting]
     B --> C[shared IrNode tree\ncodegen carrier]
     C --> D[AWG-local IrNode trees\none per AWG]

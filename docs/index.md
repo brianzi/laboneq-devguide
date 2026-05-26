@@ -20,21 +20,26 @@ graph TD
 
 ## Reading order
 
-The guide is designed to be read linearly through the compiler chapters. The early chapters give enough repository and hardware context to make source browsing practical; the middle chapters explain the IR transitions; the later chapters explain generated artifacts and runtime execution.
+The guide is now organized into four semantic bands rather than into a main text plus miscellaneous appendices. **Orientation** gives the reader the vocabulary, repository map, and hardware ecosystem needed to read the source. **Compilation pipeline** follows the lowering path from Python payload to scheduled IR, AWG-local waveform construction, and uploadable artifacts. **Runtime and data semantics** covers how those artifacts are interpreted by the controller, how instruments are operated, and how acquired data is shaped. **Maintenance reference** contains change-point and lookup material.
 
-| Chapter | Focus | Main boundary clarified |
-| --- | --- | --- |
-| [Mental model](01-mental-model.md) | Vocabulary and semantic domains | Logical experiment language versus physical resources. |
-| [Repository and build map](02-repository-and-build-map.md) | Source-tree orientation | Python packages, Rust crates, generated extension modules, and dependency roles. |
-| [Python DSL and compiler payload](03-python-dsl-and-payload.md) | DSL object graph and `ExperimentInfo` | User-facing construction versus compiler input serialization. |
-| [Global scheduling](04-global-scheduling.md) | Section timing, grids, offsets, repetition | Timing solution versus waveform/resource lowering. |
-| [IR semantics](05-ir-semantics.md) | Rust operation tree, `ScheduledNode`, `IrNode` | Conceptual differences between similarly named node structures. |
-| [Backend resource mapping](06-backend-resource-mapping.md) | Setup-to-device mapping | Logical signals versus physical channels and AWG cores. |
-| [AWG-local lowering](07-awg-local-lowering.md) | Multiplexing and interval compaction | Logical `PlayPulse` events versus physical `PlayWave` events. |
-| [Code generation artifacts](08-code-generation-artifacts.md) | SeqC, waveforms, command tables, recipe | Intermediate events versus uploadable runtime artifacts. |
-| [Runtime controller](09-runtime-controller.md) | Execution and result collection | Compiled experiment versus asynchronous device actions. |
-| [Ecosystem and hardware context](10-ecosystem-and-hardware.md) | Related repos and device constraints | LabOne Q relative to toolkit, comms, examples, and manuals. |
-| [Extension and maintenance guide](11-extension-and-maintenance.md) | Practical change points | Where to change the compiler safely. |
+| Section | Chapter | Focus | Main boundary clarified |
+| --- | --- | --- | --- |
+| Orientation | [Mental model](01-mental-model.md) | Vocabulary and semantic domains | Logical experiment language versus physical resources. |
+| Orientation | [Repository and build map](02-repository-and-build-map.md) | Source-tree orientation | Python packages, Rust crates, generated extension modules, and dependency roles. |
+| Orientation | [Ecosystem and hardware context](10-ecosystem-and-hardware.md) | Related repos and device constraints | LabOne Q relative to toolkit, comms, examples, and manuals. |
+| Compilation pipeline | [Python DSL and compiler payload](03-python-dsl-and-payload.md) | DSL object graph and `ExperimentInfo` | User-facing construction versus compiler input serialization. |
+| Compilation pipeline | [Global scheduling](04-global-scheduling.md) | Section timing, grids, offsets, repetition | Timing solution versus waveform/resource lowering. |
+| Compilation pipeline | [Global scheduling implementation](04a-global-scheduling-implementation.md) | Timing-resolver mechanisms | Constraint collection, child placement, grid adjustment, and validation. |
+| Compilation pipeline | [IR semantics](05-ir-semantics.md) | Rust operation tree, `ScheduledNode`, `IrNode` | Conceptual differences between similarly named node structures. |
+| Compilation pipeline | [Backend resource mapping](06-backend-resource-mapping.md) | Setup-to-device mapping | Logical signals versus physical channels and AWG cores. |
+| Compilation pipeline | [AWG-local lowering](07-awg-local-lowering.md) | Multiplexing and interval compaction | Logical `PlayPulse` events versus physical `PlayWave` events. |
+| Compilation pipeline | [Code generation artifacts](08-code-generation-artifacts.md) | SeqC, waveforms, command tables, recipe | Intermediate events versus uploadable runtime artifacts. |
+| Runtime and data semantics | [Runtime controller](09-runtime-controller.md) | Execution and result collection | Compiled experiment versus asynchronous device actions. |
+| Runtime and data semantics | [Device communication layer](12-device-layer.md) | Instrument node operations and device abstractions | Controller intent versus LabOne data-server communication. |
+| Runtime and data semantics | [Results, handles, and data shapes](13-results-and-data.md) | Acquired data semantics | Runtime buffers versus returned user-facing result arrays. |
+| Maintenance reference | [Extension and maintenance guide](11-extension-and-maintenance.md) | Practical change points | Where to change the compiler safely. |
+| Maintenance reference | [Source reference map](15-source-reference.md) | File-level lookup map | Conceptual stages versus implementation files. |
+| Maintenance reference | [Glossary](16-glossary.md) | Terminology lookup | Stable vocabulary across chapters. |
 
 ## Key terminology
 

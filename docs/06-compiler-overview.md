@@ -102,7 +102,7 @@ The LabOne Q compiler uses Rust extensions for performance and safety. The Pytho
 
 
 ```mermaid
-graph LR
+graph TD
     subgraph Python_Space [Python Space]
         EI[ExperimentInfo]
         CB[compat.py]

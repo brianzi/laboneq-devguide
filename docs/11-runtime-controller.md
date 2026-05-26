@@ -38,7 +38,7 @@ This page is intended for developers maintaining or extending the LabOne Q runti
 
 This page assumes familiarity with the LabOne Q overall architecture and the compilation pipeline described in earlier chapters, especially the Python DSL frontend, compiler IR, and scheduling passes. It builds on the understanding of the `ScheduledExperiment` as the compilation product handed off to the runtime, and the role of the `Controller` as the orchestrator of experiment execution.
 
-The page is structured to first introduce the key data models (`ScheduledExperiment`, `RecipeData`), then describe the runtime execution flow, including near-time and real-time boundaries, asynchronous execution workers, and result collection. It concludes with a detailed Mermaid sequence diagram illustrating the runtime-controller interaction during experiment execution.
+The page is structured to first introduce the key data models (`ScheduledExperiment`, `RecipeData`), then describe the runtime execution flow, including near-time and real-time boundaries, asynchronous execution workers, and result collection. It concludes with a detailed top-down Mermaid flowchart illustrating the runtime-controller interaction during experiment execution.
 
 Source code references are provided as clickable links to the GitHub repository for quick navigation. The main Python packages involved are under `src/python/laboneq/controller` and `src/python/laboneq/data`, with supporting code in `src/python/laboneq/executor` and `src/python/laboneq/compiler/workflow/neartime_execution.py`.
 
@@ -345,38 +345,29 @@ The controller tracks pending replacements in a `NearTimeReplacements` object ([
 
 ---
 
-## 8. Runtime and controller execution sequence diagram
+## 8. Runtime and controller execution flowchart
 
-The following Mermaid sequence diagram illustrates the high-level interaction between the main runtime components during experiment execution. It shows the submission of a compiled experiment, near-time execution loops, real-time step execution, callback invocation, replacement application, and result collection.
+The following top-down Mermaid flowchart illustrates the high-level interaction between the main runtime components during experiment execution. It shows the submission of a compiled experiment, near-time execution loops, real-time step execution, callback invocation, replacement application, and result collection.
 
 ```mermaid
-sequenceDiagram
-    participant User
-    participant Controller
-    participant NearTimeRunner
-    participant DeviceCollection
-    participant Devices
-    participant ResultCollector
-
-    User->>Controller: submit_compiled(ScheduledExperiment)
-    Controller->>Controller: validate setup fingerprint
-    Controller->>RecipeProcessor: pre_process_compiled()
-    RecipeProcessor-->>Controller: RecipeData
-    Controller->>DeviceCollection: notify_experiment_begin()
-    Controller->>NearTimeRunner: run near-time execution tree
-    NearTimeRunner->>Controller: RTEntry notification (one per step)
-    Controller->>Controller: _execute_one_step()
-    Controller->>DeviceCollection: prepare artifacts, configure triggers
-    Controller->>Devices: upload waveforms, configure AWGs
-    Controller->>Devices: arm and start execution trigger
-    Devices-->>Controller: execution complete
-    Controller->>NearTimeRunner: RTExit notification
-    NearTimeRunner->>Controller: invoke callbacks
-    Controller->>NearTimeReplacements: apply waveform/parameter replacements
-    Controller->>ResultCollector: async collect results
-    ResultCollector-->>Controller: fill ResultsBuilder buffers
-    Controller->>DeviceCollection: notify_experiment_end()
-    Controller-->>User: execution complete, results ready
+flowchart TD
+    User[User submits ScheduledExperiment] --> Validate[Controller validates setup fingerprint]
+    Validate --> Recipe[RecipeProcessor pre_process_compiled]
+    Recipe --> Begin[DeviceCollection notified of experiment begin]
+    Begin --> NearTime[NearTimeRunner runs near-time execution tree]
+    NearTime --> RTEntry[RTEntry notification for each step]
+    RTEntry --> Step[Controller executes one step]
+    Step --> Prepare[DeviceCollection prepares artifacts and triggers]
+    Prepare --> Upload[Devices upload waveforms and configure AWGs]
+    Upload --> Start[Devices arm and start execution trigger]
+    Start --> Done[Devices report execution complete]
+    Done --> RTExit[Controller sends RTExit notification]
+    RTExit --> Callbacks[NearTimeRunner invokes callbacks]
+    Callbacks --> Replacements[Controller applies waveform or parameter replacements]
+    Replacements --> Collect[ResultCollector asynchronously collects results]
+    Collect --> Buffers[ResultsBuilder buffers are filled]
+    Buffers --> End[DeviceCollection notified of experiment end]
+    End --> Results[Controller reports results ready]
 ```
 
 ---
@@ -440,32 +431,20 @@ sequenceDiagram
 
 
 ```mermaid
-sequenceDiagram
-    participant U as User/Session
-    participant C as Controller
-    participant NTR as Near-Time Runner
-    participant D as Device Collection
-    participant HW as Hardware
-
-    U->>C: run(ScheduledExperiment)
-    C->>C: validate_setup()
-    C->>C: prepare_recipe_data()
-    
-    C->>NTR: start_execution()
-    loop Near-Time Loop
-        NTR->>C: prepare_rt_step()
-        C->>D: upload_artifacts()
-        D->>HW: write_nodes / upload_elf
-        
-        NTR->>C: execute_rt_step()
-        C->>D: trigger_devices()
-        D->>HW: start_awg
-        
-        Note over HW: Real-Time Execution
-        
-        HW-->>D: acquisition_complete
-        D-->>C: results_ready
-    end
-    
-    C-->>U: Experiment Results
+flowchart TD
+    U[User or session runs ScheduledExperiment] --> V[Controller validates setup]
+    V --> R[Controller prepares recipe data]
+    R --> NTR[Near-Time Runner starts execution]
+    NTR --> Prep[Prepare real-time step]
+    Prep --> Upload[Device Collection uploads artifacts]
+    Upload --> Nodes[Hardware receives node writes and ELF uploads]
+    Nodes --> Execute[Execute real-time step]
+    Execute --> Trigger[Device Collection triggers devices]
+    Trigger --> AWG[Hardware starts AWGs]
+    AWG --> RT[Real-time execution]
+    RT --> Acq[Acquisition complete]
+    Acq --> Ready[Device Collection reports results ready]
+    Ready --> Next{More near-time steps}
+    Next -->|yes| Prep
+    Next -->|no| Results[Controller returns experiment results]
 ```

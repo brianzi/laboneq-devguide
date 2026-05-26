@@ -8,12 +8,37 @@ use_directory_urls: true
 
 theme:
   name: material
+  palette:
+    - media: "(prefers-color-scheme)"
+      scheme: default
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-auto
+        name: Follow system color scheme
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
   features:
     - navigation.sections
     - navigation.expand
     - navigation.top
     - content.code.copy
     - content.tabs.link
+
+extra_css:
+  - stylesheets/extra.css
 
 extra_javascript:
   - https://unpkg.com/mermaid@10/dist/mermaid.min.js
@@ -33,25 +58,25 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
 
 nav:
-  - Guide:
-      - LabOne Q Developer Guide: index.md
+  - Orientation:
+      - Guide overview: index.md
       - Mental model: 01-mental-model.md
       - Repository and build map: 02-repository-and-build-map.md
+      - Ecosystem and hardware context: 10-ecosystem-and-hardware.md
+  - Compilation pipeline:
       - Python DSL and compiler payload: 03-python-dsl-and-payload.md
-  - Compiler pipeline:
       - Global scheduling: 04-global-scheduling.md
       - Global scheduling implementation: 04a-global-scheduling-implementation.md
       - IR semantics: 05-ir-semantics.md
       - Backend resource mapping: 06-backend-resource-mapping.md
       - AWG-local lowering and multiplexing: 07-awg-local-lowering.md
       - Code generation artifacts: 08-code-generation-artifacts.md
-  - Runtime and ecosystem:
+  - Runtime and data semantics:
       - Runtime controller: 09-runtime-controller.md
-      - Ecosystem and hardware context: 10-ecosystem-and-hardware.md
-      - Extension and maintenance guide: 11-extension-and-maintenance.md
-  - Appendices:
       - Device communication layer: 12-device-layer.md
       - Results, handles, and data shapes: 13-results-and-data.md
+  - Maintenance reference:
+      - Extension and maintenance guide: 11-extension-and-maintenance.md
       - Source reference map: 15-source-reference.md
       - Glossary: 16-glossary.md
       - References: references.md

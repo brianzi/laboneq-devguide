@@ -207,29 +207,23 @@ flowchart TD
 
 ---
 
-## 10. Runtime Execution Sequence Diagram (Mermaid)
+## 10. Runtime Execution Flowchart (Mermaid)
 
-This sequence diagram outlines the runtime execution flow managed by the Controller and NearTimeRunner:
+This top-down flowchart outlines the runtime execution flow managed by the Controller and NearTimeRunner:
 
 ```mermaid
-sequenceDiagram
-    participant User as User Code
-    participant Controller as Controller
-    participant Devices as DeviceCollection
-    participant NearTime as NearTimeRunner
-    participant LabOne as LabOne Data Server
-
-    User->>Controller: submit_compiled(ScheduledExperiment)
-    Controller->>Devices: validate_and_prepare()
-    Controller->>NearTime: run_near_time_execution()
-    NearTime->>Controller: notify_RT_entry()
-    Controller->>Devices: configure_triggers_and_feedback()
-    Controller->>Devices: upload_artifacts()
-    Controller->>Devices: start_execution()
-    Devices->>LabOne: communicate_with_hardware()
-    LabOne-->>Devices: execution_complete()
-    Devices-->>Controller: notify_completion()
-    Controller-->>User: return_results()
+flowchart TD
+    User[User code submits ScheduledExperiment] --> Controller[Controller receives compiled experiment]
+    Controller --> Devices[DeviceCollection validates and prepares]
+    Devices --> NearTime[NearTimeRunner runs near-time execution]
+    NearTime --> RTEntry[Real-time entry notification]
+    RTEntry --> Configure[Controller configures triggers and feedback]
+    Configure --> Upload[Controller uploads artifacts]
+    Upload --> Start[Controller starts execution]
+    Start --> LabOne[LabOne Data Server communicates with hardware]
+    LabOne --> Complete[Execution complete]
+    Complete --> Notify[DeviceCollection notifies controller]
+    Notify --> Results[Controller returns results]
 ```
 
 ---
