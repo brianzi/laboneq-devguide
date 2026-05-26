@@ -15,6 +15,25 @@ This page is organized into several sections:
 
 Maintainers should use this page as a quick lookup to understand where functionality lives, how components relate, and which parts of the codebase to modify or extend for specific tasks. The page is not a tutorial but a reference map to orient development and maintenance efforts.
 
+### Canonical stage landmarks
+
+The early conceptual chapters deliberately avoid long source inventories. When a maintainer has already identified the semantic boundary involved in a change, the following table provides the compact starting points for source inspection.
+
+| Concern | Primary source locations |
+| --- | --- |
+| Python experiment object graph | `src/python/laboneq/dsl/experiment/experiment.py`, `section.py` |
+| Payload construction | `src/python/laboneq/implementation/payload_builder/experiment_info_builder/experiment_info_builder.py` |
+| Compiler workflow entry | `src/python/laboneq/compiler/workflow/compiler.py`, `realtime_compiler.py`, `compat.py` |
+| Rust scheduler | `src/rust/laboneq-scheduler/src/scheduler.rs`, `scheduled_node.rs`, `schedule_info.rs`, `timing_resolver/timing_calculator.rs` |
+| Shared IR container | `src/rust/laboneq-ir/src/node.rs`, `ir.rs`, `experiment.rs` |
+| Backend preprocessing | `src/rust/laboneq-qccs-backend/src/preprocessor.rs` |
+| Code-generator resource fanout and virtual signals | `src/rust/codegenerator/src/ir_adapter.rs`, `passes/fanout_awg.rs`, `virtual_signal.rs` |
+| Pulse-to-waveform lowering | `src/rust/codegenerator/src/passes/handle_playwaves.rs` |
+| Python runtime controller | `src/python/laboneq/controller/controller.py`, `near_time_runner.py`, `recipe_processor.py` |
+| Quantum elements and QPU | `src/python/laboneq/dsl/quantum/quantum_element.py`, `qpu.py`, `qpu_topology.py` |
+| Quantum operations | `src/python/laboneq/dsl/quantum/quantum_operations.py`, `_multimethod.py` |
+| Workflow graph and execution | `src/python/laboneq/workflow/blocks/workflow_block.py`, `task_block.py`, `executor.py`, `reference.py`, `result.py` |
+
 ---
 
 ## Module-to-responsibility tables
@@ -189,18 +208,24 @@ The controller package implements the runtime execution environment. The `Sessio
 
 ---
 
-### Higher-level quantum objects and workflows
+### Higher-level application layers
 
 | File | Key classes/functions | Description | Source link |
 |-------|----------------------|-------------|-------------|
-| `src/python/laboneq/dsl/quantum/qpu.py` | `QPU` | Groups quantum elements, operations, topology, update helpers, and experiment factories that attach operations to ordinary DSL experiments. | [qpu.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/dsl/quantum/qpu.py) |
-| `src/python/laboneq/dsl/quantum/quantum_element.py` | `QuantumElement` | Defines parameter containers, signal-line mappings, calibration generation, signal-map generation, copy, and update semantics for quantum objects. | [quantum_element.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/dsl/quantum/quantum_element.py) |
-| `src/python/laboneq/dsl/quantum/quantum_operations.py` | `QuantumOperations` | Registers and wraps high-level operation methods, binds them to a QPU, broadcasts calls, and emits ordinary DSL content under active experiment contexts. | [quantum_operations.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/dsl/quantum/quantum_operations.py) |
-| `src/python/laboneq/workflow/core.py` | `workflow`, `task`, workflow builder | Turns decorated Python functions into executable workflow graphs with structured task execution and workflow results. | [core.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/workflow/core.py) |
+| `src/python/laboneq/dsl/quantum/quantum_element.py` | `QuantumElement`, `QuantumParameters`, `AttrDict` | Defines parameter containers, signal-line mappings, calibration generation, experiment-signal generation, copy, and update semantics for quantum objects. | [quantum_element.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/dsl/quantum/quantum_element.py) |
+| `src/python/laboneq/dsl/quantum/qpu.py` | `QPU`, `QuantumPlatform`, groups, update helpers | Groups quantum elements, operations, topology, update helpers, and session-facing platform state. | [qpu.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/dsl/quantum/qpu.py) |
+| `src/python/laboneq/dsl/quantum/qpu_topology.py` | `QPUTopology`, topology edge state | Stores topology edges and edge parameter state separate from element-local parameters. | [qpu_topology.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/dsl/quantum/qpu_topology.py) |
+| `src/python/laboneq/dsl/quantum/quantum_operations.py` | `QuantumOperations`, `Operation`, `quantum_operation`, `create_pulse` | Registers and wraps high-level operation methods, binds them to a QPU, dispatches overloads, handles broadcasting, creates operation sections, and emits ordinary DSL content. | [quantum_operations.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/dsl/quantum/quantum_operations.py) |
+| `src/python/laboneq/dsl/quantum/_multimethod.py` | `MultiMethod` | Simplifies operation dispatch signatures so quantum-element types remain dispatch-relevant while scalar annotations collapse to `object`. | [_multimethod.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/dsl/quantum/_multimethod.py) |
+| `src/python/laboneq/workflow/blocks/workflow_block.py` | `WorkflowBlock` | Builds and executes workflow block trees from decorated workflow functions. | [workflow_block.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/workflow/blocks/workflow_block.py) |
+| `src/python/laboneq/workflow/blocks/task_block.py` | `TaskBlock` | Represents executable task calls, resolves inputs, stores task outputs, and records task results. | [task_block.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/workflow/blocks/task_block.py) |
+| `src/python/laboneq/workflow/executor.py` | `ExecutorState` | Holds workflow execution state, reference storage, active contexts, options lookup, recorder hooks, and interruption control. | [executor.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/workflow/executor.py) |
+| `src/python/laboneq/workflow/reference.py` | `Reference` | Represents workflow inputs, task outputs, attribute access, and indexing until execution resolves concrete values. | [reference.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/workflow/reference.py) |
+| `src/python/laboneq/workflow/result.py` | `WorkflowResult`, `TaskResult` | Stores structured workflow and task execution records for debugging, persistence, and orchestration. | [result.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/workflow/result.py) |
 | `src/python/laboneq/workflow/tasks/compile_experiment.py` | workflow compile task | Bridges workflow orchestration to `Session.compile` and returns normal compiled-experiment artifacts. | [compile_experiment.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/workflow/tasks/compile_experiment.py) |
 | `src/python/laboneq/workflow/tasks/run_experiment.py` | workflow run task | Bridges workflow orchestration to `Session.run`, injected-result paths, and lower-level result collection semantics. | [run_experiment.py](https://github.com/zhinst/laboneq/blob/main/src/python/laboneq/workflow/tasks/run_experiment.py) |
 
-Quantum objects and workflows sit above the compiler-facing DSL. Quantum objects organize calibrated parameter state and reusable operations that emit ordinary experiment content. Workflows organize larger experimental procedures around lower-level compile, run, analyze, and update tasks.
+Higher-level application layers sit above the compiler-facing DSL. Quantum elements and QPUs organize calibrated device state. Quantum operations emit ordinary DSL content from that state. Workflows organize larger experimental procedures around lower-level compile, run, analyze, and update tasks. The conceptual split is covered by [the higher-level overview](17-quantum-objects-and-workflows.md), [the quantum elements and QPU chapter](17a-quantum-elements-and-qpu.md), [the quantum operations chapter](17b-quantum-operations.md), and [the workflows chapter](17c-workflows.md).
 
 ---
 

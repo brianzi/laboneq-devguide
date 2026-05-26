@@ -8,7 +8,7 @@ This glossary provides a comprehensive reference for terminology and key concept
 
 This glossary is organized into thematic sections reflecting the layered architecture of LabOne Q and its ecosystem. Each entry defines a term or concept, explains its role and rationale, and references relevant source files or modules for deeper inspection. When maintaining or extending the codebase, this page helps clarify the meaning and boundaries of key abstractions, avoiding confusion between user-facing DSL constructs, internal intermediate representations (IRs), compiler passes, runtime models, and hardware-layer interfaces.
 
-Developers should use this glossary alongside the repository map (`02-repository-map.md`) and compiler overview (`06-compiler-overview.md`) to understand how terms relate to code locations and workflows. Source links point to stable GitHub paths for direct code reference.
+Developers should use this glossary alongside the [repository and build map](02-repository-and-build-map.md), [mental model](01-mental-model.md), and [source reference map](15-source-reference.md) to understand how terms relate to code locations and workflows. Source links point to stable GitHub paths for direct code reference.
 
 ---
 
@@ -18,6 +18,7 @@ Developers should use this glossary alongside the repository map (`02-repository
 - [LabOne Q Python DSL Terms](#labone-q-python-dsl-terms)
 - [Compiler and Intermediate Representations (IR)](#compiler-and-intermediate-representations-ir)
 - [Runtime and Controller Terms](#runtime-and-controller-terms)
+- [Higher-Level Application-Layer Terms](#higher-level-application-layer-terms)
 - [Zurich Instruments Software Ecosystem](#zurich-instruments-software-ecosystem)
 
 ---
@@ -90,6 +91,22 @@ Developers should use this glossary alongside the repository map (`02-repository
 | **SweepParamsTracker** | Utility tracking parameter values and updates during near-time execution. | `src/python/laboneq/controller/utilities/sweep_params_tracker.py` | NearTimeRunner, Controller | Ensures consistent parameter propagation to compiled recipe. |
 | **ResultsBuilder** | Data structure for collecting and organizing experiment results during runtime. | `src/python/laboneq/controller/results.py` | Controller, user | Preallocates buffers and maps hardware result sources to handles. |
 | **Callbacks** | User-registered functions invoked during near-time execution for dynamic control or data processing. | `src/python/laboneq/controller/controller.py` | User, runtime | Callback results are stored in experiment results; support asynchronous execution. |
+
+---
+
+## Higher-Level Application-Layer Terms
+
+| Term | Description | Location / Source | Consumers | Invariants / Notes |
+|-------|-------------|-------------------|-----------|--------------------|
+| **QuantumElement** | A named calibrated object, such as a qubit-like entity, with operation-level signal names and a typed parameter container. | `src/python/laboneq/dsl/quantum/quantum_element.py` | QPU, quantum operations, workflows, application packages | Produces signal maps and calibration fragments for ordinary DSL experiment construction; it is not a compiler IR node. |
+| **QuantumParameters** | Typed parameter container for calibrated values and user-defined `custom` data. | `src/python/laboneq/dsl/quantum/quantum_element.py` | Quantum elements and quantum operations | Supports validated copy-and-replace updates, including dotted nested parameter paths. |
+| **QPU** | Logical quantum-device container that groups quantum elements, attaches quantum operations, and stores topology. | `src/python/laboneq/dsl/quantum/qpu.py` | Experiment builders, workflows, application packages | Supplies structured inputs to DSL experiment construction; compilation still receives ordinary experiment and setup objects. |
+| **QuantumOperations** | Registered operation set whose methods emit ordinary DSL sections, reserves, pulses, acquisitions, and nested calls. | `src/python/laboneq/dsl/quantum/quantum_operations.py` | QPU-bound experiment builders and application packages | Operation calls are macro-like DSL emitters, not backend compiler passes or hardware instructions. |
+| **Operation wrapper** | Runtime wrapper around a registered quantum operation implementation, adding section creation, reserve policy, duplicate-element checks, broadcasting, and call dispatch. | `src/python/laboneq/dsl/quantum/quantum_operations.py` | Quantum operation calls | Returns created DSL sections for normal calls; `omit_section` and `omit_reserves` deliberately change wrapper behavior. |
+| **Workflow** | Decorated executable task graph for build, compile, run, analysis, persistence, and update procedures. | `src/python/laboneq/workflow/blocks/workflow_block.py` | Application workflows and calibration campaigns | Coordinates lower-level LabOne Q APIs but delegates compilation to `Session.compile` and execution to `Session.run`. |
+| **TaskBlock** | Workflow graph node representing a decorated task call captured during workflow construction. | `src/python/laboneq/workflow/blocks/task_block.py` | Workflow executor and result tree | Resolves references at execution time and records task inputs, outputs, status, and timestamps. |
+| **Reference** | Placeholder for workflow inputs, task outputs, indexing, or attribute access during graph construction. | `src/python/laboneq/workflow/reference.py` | Workflow blocks and executor state | Must resolve to a concrete value before a task executes; unresolved references indicate graph or execution-state problems. |
+| **WorkflowResult** | Structured execution record containing workflow inputs, outputs, nested task results, timestamps, and indices. | `src/python/laboneq/workflow/result.py` | Debugging, persistence, analysis, and orchestration | Primary artifact for diagnosing orchestration and calibration-update behavior. |
 
 ---
 
