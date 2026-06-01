@@ -11,7 +11,8 @@ graph TD
     C --> D[ScheduledNode tree\nglobal timing solution]
     D --> E[shared IrNode tree\nmutable codegen carrier]
     E --> F[backend resource model\nphysical channels, AWG cores, device traits]
-    F --> G[AWG-local IrNode trees\nfanout by sequencer core]
+    F --> FB[feedback routing\nregister layout and hardware path]
+    FB --> G[AWG-local IrNode trees\nfanout by sequencer core]
     G --> H[virtual signals\nlogical signals sharing one waveform resource]
     H --> I[PlayWave lowering\ninterval compaction and waveform signatures]
     I --> J[SeqC, waves, command tables, recipe]
@@ -34,6 +35,7 @@ The guide is now organized into five semantic bands rather than into a main text
 | Compilation pipeline | [Global scheduling implementation](04a-global-scheduling-implementation.md) | Timing-resolver mechanisms | Constraint collection, child placement, grid adjustment, and validation. |
 | Compilation pipeline | [IR semantics](05-ir-semantics.md) | Rust operation tree, `ScheduledNode`, `IrNode` | Conceptual differences between similarly named node structures. |
 | Compilation pipeline | [Backend resource mapping](06-backend-resource-mapping.md) | Setup-to-device mapping | Logical signals versus physical channels and AWG cores. |
+| Compilation pipeline | [Feedback representation and hardware lowering](07a-feedback-compilation.md) | `match/case`, feedback-register allocation, local/global paths, SeqC branches, recipe routing fields, and controller setup | Program-level feedback intent versus hardware feedback transport and branch selection. |
 | Compilation pipeline | [AWG-local lowering](07-awg-local-lowering.md) | Multiplexing and interval compaction | Logical `PlayPulse` events versus physical `PlayWave` events. |
 | Compilation pipeline | [Code generation artifacts](08-code-generation-artifacts.md) | SeqC, waveforms, command tables, recipe | Intermediate events versus uploadable runtime artifacts. |
 | Runtime and data semantics | [Runtime controller](09-runtime-controller.md) | Execution and result collection | Compiled experiment versus asynchronous device actions. |

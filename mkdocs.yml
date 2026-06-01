@@ -71,6 +71,7 @@ nav:
       - Global scheduling implementation: 04a-global-scheduling-implementation.md
       - IR semantics: 05-ir-semantics.md
       - Backend resource mapping: 06-backend-resource-mapping.md
+      - Feedback representation and hardware lowering: 07a-feedback-compilation.md
       - AWG-local lowering and multiplexing: 07-awg-local-lowering.md
       - Code generation artifacts: 08-code-generation-artifacts.md
   - Runtime and data semantics:
