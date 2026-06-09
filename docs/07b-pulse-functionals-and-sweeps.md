@@ -158,6 +158,42 @@ graph TD
 
 This layered representation avoids conflating a pulse definition with one of its uses. A single `drag_pulse` object can therefore appear in many locations with different amplitudes, phases, markers, or functional-specific parameters. The compiler output, however, is organized around **sampled waveform signatures**, not around the original pulse object alone.
 
+## Sweeping length, amplitude, phase, and frequency
+
+The sweep behavior is easiest to reason about by separating **shape parameters** from **playback parameters**. Functional-specific entries in `pulse_parameters`, such as the `beta` parameter in the documented custom-DRAG example, are inputs to the pulse sampler. They can change the samples themselves. Common play-operation fields such as `length`, `amplitude`, `phase`, `increment_oscillator_phase`, and oscillator frequency updates are represented beside the pulse object and are lowered through several specialized paths. Some of those paths intentionally avoid resampling the envelope when a hardware playback knob can express the variation.
+
+```mermaid
+graph TD
+    SweepParam["Realtime or near-time sweep value"] --> LengthPath["length field"]
+    SweepParam --> AmpPath["play amplitude"]
+    SweepParam --> PhasePath["phase or oscillator phase"]
+    SweepParam --> FreqPath["oscillator frequency"]
+    LengthPath --> Scheduler["resolved before scheduling"]
+    Scheduler --> SampleDuration["sampling duration and waveform signature"]
+    AmpPath --> CTAmplitude["command-table amplitude or amplitude register when available"]
+    AmpPath --> Rescale["sample rescaling and waveform reuse"]
+    PhasePath --> SWPhase["software modulation phase in sampled waveform"]
+    PhasePath --> CTPhase["hardware phase increment in command table when supported"]
+    FreqPath --> SWFreq["software modulation frequency in sampled waveform"]
+    FreqPath --> HWFreq["hardware oscillator sweep node when supported"]
+```
+
+| Swept field | Primary lowering path | When samples change | Notable constraints |
+| --- | --- | --- | --- |
+| `length` | Rust experiment preprocessing resolves missing or explicit play lengths before later scheduling; scheduling and waveform sampling then see a concrete duration or a per-sweep unrolled duration. | Yes. The sample grid, event duration, waveform signature, and pulse-map span depend on the resolved length. | Length is a timing property, not a late command-table knob. If it varies over a real-time sweep, the compiler must materialize the relevant loop iterations before scheduling and cannot simply upload one waveform and vary a hardware register. |
+| `amplitude` | Rust signature and amplitude-register passes try to move playback scaling into command-table amplitude fields and, on supported devices, per-iteration amplitude-register initialization. | Often no. The sampled envelope can be normalized and reused while the command table or amplitude register supplies the play-time scale. | This path depends on command-table phase/amplitude support. Register allocation is finite; unsupported or exhausted cases fall back to register `0` behavior, which can require more distinct command-table entries or waveform variants. |
+| `phase` / `increment_oscillator_phase` | For software modulation, oscillator state is accumulated and passed to the Python sampler as phase context; for hardware-modulated IQ/RF paths, phase increments can be represented in command-table or oscillator-control metadata where supported. | Software modulation changes the numerically sampled complex envelope. Hardware phase increments can avoid resampling by using playback metadata. | `set_oscillator_phase` is rejected on hardware-modulated signals. Conditional software-modulated phase setting and some conditional phase increments are rejected. Hardware phase increments are restricted to IQ signals, or RF signals using software modulation. |
+| Oscillator `frequency` | Software-modulated frequencies are timestamped and become sampler context. Hardware-modulated real-time frequency sweeps are rewritten into dedicated oscillator-frequency-sweep IR nodes. | Software modulation changes sampled I/Q values. Hardware oscillator sweeps do not resample the pulse envelope for each frequency value. | Real-time hardware frequency sweeps are supported on SHFSG, SHFQA, and HDAWG, with an HDAWG limit of 512 sweep iterations. Non-linear hardware frequency sweeps are allowed but consume more sequencer memory than linear sweeps. |
+| Functional-specific `pulse_parameters` | Definition and play-level maps are merged and interned, then evaluated by the Python sampler callback during AWG-local code generation. | Yes whenever the parameter affects the functional output. | These parameters are not generic hardware registers. They affect the sampled waveform identity unless the functional happens to ignore them. |
+
+For `length`, the important point is that LabOne Q treats duration as part of the scheduled event geometry. The Rust experiment processor fills in missing play lengths from the pulse definition, derives sampled-pulse lengths from sample count and sampling rate, creates concrete marker-only pulses when needed, and rejects illegal fields on virtual-Z/no-pulse operations. A swept length therefore has to become explicit before the scheduler can place later events, because downstream timing depends on the actual duration at that sweep point. The resulting samples are produced for that duration; they are not one fixed array with a late length register.
+
+Amplitude is different. A play amplitude is a common playback parameter and not a functional-specific shape parameter. The Rust signature pass can aggregate command-table amplitude, rescale the sampled waveform toward a reusable normalized form, and carry an amplitude setting in the playback signature. A companion pass scans `amp_param_name` values, allocates deterministic amplitude-register indices when the AWG supports command-table phase/amplitude, and inserts `InitAmplitudeRegister` nodes at loop-iteration boundaries when a swept amplitude flows into compressed loops. The inserted register value uses the absolute value of the swept parameter, which is why sweeps through zero may require additional command-table entries even though the mechanism still handles complex-valued amplitudes.
+
+Phase and frequency split along the **software-modulation versus hardware-modulation** boundary. For software-modulated signals, oscillator frequency and phase are part of the numeric waveform context. The Rust oscillator pass records the active software oscillator frequency at each pulse timestamp and tracks software oscillator phase from `set_oscillator_phase` and `increment_oscillator_phase`; the Python sampler then receives that context and applies modulation while constructing the I/Q arrays. For hardware-modulated signals, the compiler tries to keep oscillator frequency and supported phase increments as hardware-facing metadata instead. Real-time hardware oscillator-frequency sweeps are collected from `SetOscillatorFrequency` nodes, checked for device compatibility, and rewritten into `SetOscillatorFrequencySweep` IR nodes with either linear sweep metadata or explicit non-linear values. That path is separate from pulse-functional evaluation: the envelope samples and the oscillator-control program are compiled as cooperating artifacts.
+
+This distinction explains why an experiment may produce fewer waveform arrays than the number of sweep points for amplitude or hardware oscillator sweeps, but many arrays for swept length or functional-specific shape parameters. A sweep over `beta` or `length` changes the waveform identity. A sweep over amplitude, hardware phase, or hardware oscillator frequency can sometimes remain a single sampled envelope plus changing playback metadata, subject to device support and command-table/register limits.
+
 ## Hardware-facing artifacts
 
 A compiled experiment contains sampled waveform arrays and the program fragments that refer to them. The functional name and Python callable are compile-time inputs; they are not shipped to an SHFSG, HDAWG, SHFQA, or UHFQA as executable code. The instruments receive arrays, waveform indices, command tables where applicable, and SeqC that plays or references those arrays.
@@ -194,9 +230,11 @@ The waveform sampler also enforces hardware-oriented size and marker constraints
 | Functional output must match requested sample count | The sampler constructs a target time grid for the scheduled length and sampling rate. | Shape mismatch, invalid waveform, or downstream array assembly failure. |
 | Device sample multiple must be respected | AWG waveform memory and sequencer playback granularity. | Compile-time waveform length error in AWG-local sampling. |
 | Swept shape parameters create waveform variants | Distinct merged parameter maps produce distinct waveform signatures. | More uploaded waves than expected when sweeping `beta`, `sigma`, width, or other shape parameters. |
-| Play amplitude is not the same layer as `pulse_parameters` | Amplitude is a common play parameter; `beta` and similar entries are functional-specific. | A sweep appears to affect only scaling, or fails to affect the intended shape, if it is attached to the wrong argument. |
+| Play amplitude is not the same layer as `pulse_parameters` | Amplitude is a common play parameter; `beta` and similar entries are functional-specific. Command-table amplitude and amplitude registers may avoid resampling for amplitude-only variation. | A sweep appears to affect only scaling, or fails to affect the intended shape, if it is attached to the wrong argument. |
 | Sampled pulses bypass functional evaluation | `PulseSampled` already carries samples. | Changing functional registration has no effect on sampled-pulse objects. |
 | Integration kernels are sampled into readout artifacts | Acquire kernels use pulse-like definitions but target integration units. | Kernel shape and length problems appear in integration-weight artifacts rather than drive waveform artifacts. |
+| Length changes are scheduling changes | Pulse length is resolved before scheduling and fixes event geometry. | Swept length causes separate scheduled durations and waveform variants rather than a late hardware playback adjustment. |
+| Modulation mode changes phase/frequency lowering | Software modulation is applied during numeric sampling, while supported hardware oscillator sweeps stay as oscillator-control metadata. | Phase/frequency sweeps may either create additional waveform variants or appear as oscillator/command-table artifacts, depending on signal calibration and device support. |
 
 A useful debugging sequence is therefore to inspect the pulse object first, then the play operation overrides, then the compiled waveform inventory. If the compiled experiment contains many waveform names for one pulse `uid`, the cause is usually not duplication in the DSL object; it is usually a set of distinct resolved sweep values, amplitudes, lengths, channels, or modulation contexts that make separate waveform signatures necessary.
 
@@ -209,12 +247,15 @@ A useful debugging sequence is therefore to inspect the pulse object first, then
 | Pulse object model | `src/python/laboneq/dsl/experiment/pulse.py` | Defines `PulseFunctional`, `PulseSampled`, evaluation helpers, and sampled-pulse generation helpers. |
 | Play-operation model | `src/python/laboneq/dsl/experiment/play_pulse.py` | Carries play-time amplitude, length, marker, phase, and `pulse_parameters` overrides. |
 | Payload conversion | `src/python/laboneq/implementation/legacy_adapters/converters_experiment_description.py` | Preserves `PulseFunctional.pulse_parameters` and `PlayPulse.pulse_parameters` as distinct compiler-payload fields. |
-| Rust length preprocessing | `src/rust/laboneq-compiler-py/src/experiment_processor/resolve_pulses.rs` | Resolves pulse and acquire lengths before final sampling. |
+| Rust length preprocessing | `src/rust/laboneq-compiler-py/src/experiment_processor/resolve_pulses.rs` | Resolves play, marker, sampled-pulse, and acquire lengths before scheduling and final sampling. |
 | Pulse-parameter interning | `src/rust/codegenerator-utils/src/pulse_parameters.rs` | Deduplicates and merges definition-level and play-level pulse-parameter maps. |
 | Sampling descriptor schema | `src/python/laboneq/_rust/codegenerator/__init__.pyi` | Exposes `PulseSamplingDesc`, `WaveformSamplingDesc`, and `PulseParameters` across the Rust/Python boundary. |
 | Rust code-generator entry point | `src/rust/codegenerator-py/src/lib.rs` | Builds the Rust code-generation IR, constructs `WaveformSamplerPy`, and calls Rust `generate_code()` with that sampler. |
 | Rust sampler callback bridge | `src/rust/codegenerator-py/src/waveform_sampler/sampler.rs` | Lets Rust AWG lowering invoke Python `sample_and_compress()` / `sample_only()` for waveform candidates without executing arbitrary pulse Python inside pure Rust. |
 | Rust AWG waveform finalization | `src/rust/codegenerator/src/generator.rs` | Calls `collect_and_finalize_waveforms()` through the sampler interface, then resumes SeqC/result construction. |
+| Signature amplitude and phase handling | `src/rust/codegenerator/src/passes/handle_signatures.rs` | Moves eligible amplitude and phase variation into command-table signatures and normalizes sampled-wave amplitudes for reuse. |
+| Amplitude-register allocation | `src/rust/codegenerator/src/passes/handle_amplitude_registers.rs` | Allocates command-table amplitude registers for swept play amplitudes and inserts per-iteration initialization events where supported. |
+| Oscillator and modulation lowering | `src/rust/codegenerator/src/passes/handle_oscillators.rs` | Separates software-modulation sampler context from hardware oscillator-frequency sweep IR and enforces phase/frequency device constraints. |
 | Numeric pulse sampling | `src/python/laboneq/core/utilities/pulse_sampler.py` | Evaluates functionals into arrays and applies amplitude, phase, modulation, marker, and validation logic. |
 | Waveform assembly | `src/python/laboneq/compiler/seqc/waveform_sampler.py` | Builds sampled waveforms and pulse maps from scheduled pulse parts. |
 | Compiled artifact model | `src/python/laboneq/data/scheduled_experiment.py` | Stores waveform artifacts and logical pulse-to-waveform traceability. |
