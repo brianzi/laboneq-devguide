@@ -72,6 +72,7 @@ nav:
       - IR semantics: 05-ir-semantics.md
       - Backend resource mapping: 06-backend-resource-mapping.md
       - Feedback representation and hardware lowering: 07a-feedback-compilation.md
+      - Pulse functionals and parameter sweeps: 07b-pulse-functionals-and-sweeps.md
       - AWG-local lowering and multiplexing: 07-awg-local-lowering.md
       - Code generation artifacts: 08-code-generation-artifacts.md
   - Runtime and data semantics:
