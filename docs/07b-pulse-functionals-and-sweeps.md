@@ -2,20 +2,20 @@
 
 Pulse functionals are the point where LabOne Q lets an experiment describe a waveform by **recipe** rather than by samples. A pulse object can say “sample the registered `drag` functional with these default parameters”, while a later `play()` call can override common pulse attributes such as amplitude or functional-specific attributes such as `beta`. When those attributes are sweep parameters, the compiler must preserve the symbolic parameter long enough to generate the right loop structure, but it must eventually produce concrete waveform arrays and AWG references because the instruments do not execute arbitrary Python pulse functions.
 
-The user manual demonstrates the two most important user-facing patterns: sweeping a shared play attribute through `Experiment.play(..., amplitude=amplitude_sweep)`, and sweeping a functional-specific parameter through `Experiment.play(..., pulse_parameters={"beta": beta_sweep})`.[^manual-pulse-library] This chapter follows those two cases vertically from the DSL object model through payload conversion, Rust preprocessing, pulse-parameter interning, Python waveform sampling, and the final compiled artifacts.
+The user manual demonstrates the two most important user-facing patterns: sweeping a shared play attribute through `Experiment.play(..., amplitude=amplitude_sweep)`, and sweeping a functional-specific parameter through `Experiment.play(..., pulse_parameters={"beta": beta_sweep})`.[1] This chapter follows those two cases vertically from the DSL object model through payload conversion, Rust preprocessing, pulse-parameter interning, Python waveform sampling, and the final compiled artifacts.
 
 ```mermaid
 graph LR
-    API[User API\npulse_library.drag\nregister_pulse_functional] --> PulseObj[PulseFunctional\nfunction name + defaults]
-    API --> Play[play operation\namplitude / pulse_parameters]
-    PulseObj --> Payload[compiler payload\nPulseDef + PlayPulse]
+    API["User API<br/>pulse_library.drag<br/>register_pulse_functional"] --> PulseObj["PulseFunctional<br/>function name and defaults"]
+    API --> Play["play operation<br/>amplitude and pulse_parameters"]
+    PulseObj --> Payload["compiler payload<br/>PulseDef and PlayPulse"]
     Play --> Payload
-    Payload --> RustPre[Rust preprocessing\nresolve pulse lengths]
-    RustPre --> Intern[codegen parameter interning\ndefinition + play maps]
-    Intern --> Desc[waveform sampling descriptors\nper AWG waveform signature]
-    Desc --> Sampler[Python sampler\nfunctional -> samples]
-    Sampler --> Artifacts[compiled artifacts\nwaves, pulse map, wave indices]
-    Artifacts --> Instrument[device upload\narrays + SeqC references]
+    Payload --> RustPre["Rust preprocessing<br/>resolve pulse lengths"]
+    RustPre --> Intern["Rust code generation<br/>parameter interning"]
+    Intern --> Desc["sampling descriptors<br/>per AWG waveform signature"]
+    Desc --> Sampler["Python sampler callback<br/>functional to samples"]
+    Sampler --> Artifacts["compiled artifacts<br/>waves, pulse map, wave indices"]
+    Artifacts --> Instrument["device upload<br/>arrays and SeqC references"]
 ```
 
 The chapter belongs next to [Feedback representation and hardware lowering](07a-feedback-compilation.md) because both topics are cross-cutting special cases. They begin as convenient DSL constructs, survive through intermediate representations, and are only fully resolved when backend and AWG-local information is available. Pulse functionals differ from feedback in one essential respect: the final hardware-facing result is not a branch route or register allocation, but a set of sampled arrays, waveform indices, and sequence references consumed by [AWG-local lowering and multiplexing](07-awg-local-lowering.md).
@@ -24,7 +24,7 @@ The chapter belongs next to [Feedback representation and hardware lowering](07a-
 
 A LabOne Q pulse definition is either a **functional pulse** or a **sampled pulse**. A functional pulse records a registered function name, a nominal length, an amplitude, and a dictionary of functional-specific default parameters. A sampled pulse records an array-like sample payload directly. The built-in pulse-library factories such as `const`, `gaussian`, and `drag` construct these objects for common shapes, and `register_pulse_functional()` extends the same registry for user-defined shapes.
 
-The documented sweep idioms intentionally separate common play parameters from functional-specific pulse parameters. Amplitude is a property of the `play()` operation, so a Rabi-style amplitude sweep is expressed as a normal play argument. The DRAG `beta` parameter belongs to the pulse functional, so it is supplied through the `pulse_parameters` mapping at the play site.[^manual-pulse-library]
+The documented sweep idioms intentionally separate common play parameters from functional-specific pulse parameters. Amplitude is a property of the `play()` operation, so a Rabi-style amplitude sweep is expressed as a normal play argument. The DRAG `beta` parameter belongs to the pulse functional, so it is supplied through the `pulse_parameters` mapping at the play site.[1]
 
 ```python
 # Definition-level defaults. The pulse object is still symbolic: it names the
@@ -103,25 +103,37 @@ This split explains why a pulse can be inspected or plotted earlier for convenie
 
 Pulse sampling occurs late because it depends on information that is not fully available in the user-facing DSL. The compiler must first know the mapped signal, device type, AWG sampling rate, modulation context, waveform length in samples, and the resolved value of every sweep parameter that affects the waveform signature. Rust preprocessing participates early by resolving pulse and acquisition lengths. For a functional pulse, the nominal length can come from the pulse definition or from a play-time length override. For a sampled pulse, the sample count and signal sampling rate determine the effective length.
 
-Once scheduling and resource mapping have built AWG-local waveform signatures, the code generator passes `WaveformSamplingDesc` and `PulseSamplingDesc` objects across the Rust/Python boundary. Each pulse sampling descriptor contains the pulse definition, start and length in samples, amplitude, phase, optional oscillator frequency, channel identity, markers, and merged pulse-parameter information. The Python `waveform_sampler.sample_waveform()` path then materializes the waveform arrays and records which logical pulse instances contributed to each sampled waveform.
+The Rust/Python split is not a second, independent compilation pipeline. Python orchestrates the real-time compiler: it invokes a scheduler, constructs a code-generator wrapper, and then calls the Rust `codegenerator.generate_code()` extension. Inside that Rust entry point, the compiler converts the experiment IR into code-generation IR, owns the AWG-local event lowering, and constructs a `WaveformSamplerPy` adapter around the Python pulse definitions and deduplicated pulse-parameter maps. Rust then calls the sampler trait while finalizing AWG waveforms. That adapter temporarily attaches to Python and invokes `sample_and_compress()` or `sample_only()` for each waveform sampling candidate; after Python returns sampled signatures or compressed parts, Rust resumes SeqC/result construction.
+
+This means that scheduling and AWG-local lowering still belong to the Rust-backed compiler path, while numeric pulse-functional evaluation remains in Python because the registered pulse functions are Python callables and the arrays are NumPy objects. Each `WaveformSamplingDesc` and `PulseSamplingDesc` crossing this callback boundary contains the pulse definition, start and length in samples, amplitude, phase, optional oscillator frequency, channel identity, markers, and merged pulse-parameter information. The Python `waveform_sampler.sample_waveform()` path then materializes the waveform arrays and records which logical pulse instances contributed to each sampled waveform.
 
 ```mermaid
 sequenceDiagram
-    participant DSL as DSL / payload
-    participant Rust as Rust compiler
-    participant CG as Rust code generator
-    participant Py as Python waveform sampler
+    participant PyOrch as Python compiler driver
+    participant RustSched as Rust scheduler and IR preprocessing
+    participant RustCG as Rust code generator
+    participant PySampler as Python waveform sampler
     participant Out as Compiled experiment
-    DSL->>Rust: PulseFunctional + PlayPulse overrides
-    Rust->>Rust: resolve pulse lengths and schedule timing
-    Rust->>CG: build AWG-local sampled events
-    CG->>CG: merge and intern pulse parameter maps
-    CG->>Py: WaveformSamplingDesc with resolved parameters
-    Py->>Py: evaluate functional at AWG sampling rate
-    Py->>Out: sampled_waveforms, pulse_map, wave indices
+    PyOrch->>RustSched: run scheduling with ExperimentIr
+    RustSched-->>PyOrch: scheduled experiment IR
+    PyOrch->>RustCG: generate_code with ExperimentIr
+    RustCG->>RustCG: build AWG-local events and waveform candidates
+    RustCG->>RustCG: merge and intern pulse parameter maps
+    RustCG->>PySampler: callback with WaveformSamplingDesc
+    PySampler-->>RustCG: sampled signatures or compressed parts
+    RustCG-->>PyOrch: SeqC, sampled_waveforms, indices, metadata
+    PyOrch->>Out: package waves, pulse map, and recipe artifacts
 ```
 
 The most important operational consequence is that a functional-specific sweep such as `beta_sweep` is resolved before the sampler is called for a concrete waveform variant. The sampler receives a numeric `beta` value for each waveform signature that has to be materialized. If several sweep points produce distinct parameter maps, they can produce several distinct sampled waveforms even when the pulse `uid` is the same.
+
+| Phase boundary | Owner in the current implementation | Pulse-functional responsibility |
+| --- | --- | --- |
+| Real-time compiler orchestration | Python | Calls the scheduler and then the code-generator wrapper. |
+| Scheduling and pulse-length preprocessing | Rust-backed compiler modules invoked from Python | Resolves schedule-relevant lengths and timing before concrete waveform arrays exist. |
+| AWG event lowering and waveform-candidate construction | Rust code generator | Creates AWG-local play events, waveform signatures, and pulse-parameter identifiers. |
+| Numeric functional evaluation | Python callback invoked by Rust | Calls the registered pulse functional and NumPy-based sampler for concrete descriptors. |
+| Artifact packaging | Rust result plus Python wrapper | Returns sampled waveform signatures, SeqC, indices, pulse maps, and recipe-facing metadata. |
 
 ## Parameter precedence and waveform identity
 
@@ -129,11 +141,11 @@ LabOne Q treats pulse parameters as a layered map. The pulse definition provides
 
 ```mermaid
 graph TD
-    Defaults[PulseFunctional defaults\n{"beta": 0.3, "sigma": ...}] --> Merge[merged pulse parameters]
-    Overrides[PlayPulse overrides\n{"beta": beta_sweep}] --> Merge
-    Sweep[Sweep value for this point\nbeta = 0.5] --> Merge
-    Merge --> Signature[waveform signature\nshape + timing + channel + params]
-    Signature --> Samples[sampled array]
+    Defaults["PulseFunctional defaults<br/>beta default, sigma default"] --> Merge["merged pulse parameters"]
+    Overrides["PlayPulse overrides<br/>beta sweep reference"] --> Merge
+    Sweep["Sweep value for this point<br/>beta = 0.5"] --> Merge
+    Merge --> Signature["waveform signature<br/>shape, timing, channel, params"]
+    Signature --> Samples["sampled array"]
 ```
 
 | Parameter category | Example | Precedence and identity effect |
@@ -163,11 +175,11 @@ The artifact shape is easiest to understand as a two-level mapping. At the code-
 
 ```mermaid
 graph LR
-    Functional[drag functional\nbeta = 0.5] --> Samples[I/Q samples]
-    Samples --> Wave[waveform file/index]
-    Wave --> SeqC[SeqC reference]
-    Wave --> CT[optional command-table entry]
-    Functional --> PulseMap[pulse map\nlogical uid -> waveform span]
+    Functional["drag functional<br/>beta = 0.5"] --> Samples["I/Q samples"]
+    Samples --> Wave["waveform file or index"]
+    Wave --> SeqC["SeqC reference"]
+    Wave --> CT["optional command-table entry"]
+    Functional --> PulseMap["pulse map<br/>logical uid to waveform span"]
 ```
 
 ## Constraints and debugging consequences
@@ -200,10 +212,13 @@ A useful debugging sequence is therefore to inspect the pulse object first, then
 | Rust length preprocessing | `src/rust/laboneq-compiler-py/src/experiment_processor/resolve_pulses.rs` | Resolves pulse and acquire lengths before final sampling. |
 | Pulse-parameter interning | `src/rust/codegenerator-utils/src/pulse_parameters.rs` | Deduplicates and merges definition-level and play-level pulse-parameter maps. |
 | Sampling descriptor schema | `src/python/laboneq/_rust/codegenerator/__init__.pyi` | Exposes `PulseSamplingDesc`, `WaveformSamplingDesc`, and `PulseParameters` across the Rust/Python boundary. |
+| Rust code-generator entry point | `src/rust/codegenerator-py/src/lib.rs` | Builds the Rust code-generation IR, constructs `WaveformSamplerPy`, and calls Rust `generate_code()` with that sampler. |
+| Rust sampler callback bridge | `src/rust/codegenerator-py/src/waveform_sampler/sampler.rs` | Lets Rust AWG lowering invoke Python `sample_and_compress()` / `sample_only()` for waveform candidates without executing arbitrary pulse Python inside pure Rust. |
+| Rust AWG waveform finalization | `src/rust/codegenerator/src/generator.rs` | Calls `collect_and_finalize_waveforms()` through the sampler interface, then resumes SeqC/result construction. |
 | Numeric pulse sampling | `src/python/laboneq/core/utilities/pulse_sampler.py` | Evaluates functionals into arrays and applies amplitude, phase, modulation, marker, and validation logic. |
 | Waveform assembly | `src/python/laboneq/compiler/seqc/waveform_sampler.py` | Builds sampled waveforms and pulse maps from scheduled pulse parts. |
 | Compiled artifact model | `src/python/laboneq/data/scheduled_experiment.py` | Stores waveform artifacts and logical pulse-to-waveform traceability. |
 
 ## References
 
-[^manual-pulse-library]: Zurich Instruments, ["Pulse Library and Sampled Pulses"](https://docs.zhinst.com/labone_q_user_manual/core/functionality_and_concepts/03_sections_pulses/tutorials/01_pulse_library.html#define-a-new-pulse-type-and-sweep-it), LabOne Q User Manual.
+[1]: https://docs.zhinst.com/labone_q_user_manual/core/functionality_and_concepts/03_sections_pulses/tutorials/01_pulse_library.html#define-a-new-pulse-type-and-sweep-it "Zurich Instruments, Pulse Library and Sampled Pulses, LabOne Q User Manual"
